@@ -1,0 +1,4 @@
+id,username,email,name,password_hash,role,created_at,last_login
+1,admin,admin@hobeom.com,관리자,$2b$10$rBV2HQ/xsvx0UsQ6ST.VVeF7Q1QlBA/kXhXh9ryOHVgxzp6TQk75C,admin,2025-01-01T00:00:00Z,2025-01-15T09:30:00Z
+2,user1,user1@hobeom.com,사용자1,$2b$10$rBV2HQ/xsvx0UsQ6ST.VVeF7Q1QlBA/kXhXh9ryOHVgxzp6TQk75C,user,2025-01-02T00:00:00Z,2025-01-14T14:20:00Z
+3,demo,demo@hobeom.com,데모사용자,$2b$10$rBV2HQ/xsvx0UsQ6ST.VVeF7Q1QlBA/kXhXh9ryOHVgxzp6TQk75C,user,2025-01-03T00:00:00Z,

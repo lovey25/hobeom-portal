@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/auth";
-import { getUserByUsername } from "@/lib/data";
+import { getUserByUsername, updateUserLastLogin } from "@/lib/data";
 import { ApiResponse, AuthResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -39,8 +39,19 @@ export async function POST(request: NextRequest) {
     // JWT 토큰 생성
     const token = generateToken(user);
 
+    // 마지막 로그인 시간 업데이트
+    try {
+      await updateUserLastLogin(user.id);
+    } catch (error) {
+      console.error("Failed to update last login time:", error);
+      // 로그인 시간 업데이트 실패는 로그인 자체를 실패시키지 않음
+    }
+
+    // 업데이트된 사용자 정보 다시 조회
+    const updatedUser = await getUserByUsername(username);
+
     // 비밀번호 해시는 응답에서 제거
-    const { passwordHash, ...userWithoutPassword } = user;
+    const { passwordHash, ...userWithoutPassword } = updatedUser || user;
 
     const response: AuthResponse = {
       success: true,
