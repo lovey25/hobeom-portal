@@ -317,6 +317,115 @@ export async function getTravelItems(activeOnly = true): Promise<TravelItem[]> {
 }
 
 /**
+ * 여행 준비물 아이템 생성
+ */
+export async function createTravelItem(data: {
+  name: string;
+  category: string;
+  importance: number;
+  width: number;
+  height: number;
+  depth: number;
+  weight: number;
+}): Promise<TravelItem> {
+  try {
+    const rawItems = await readCSV<any>("travel-items.csv");
+    const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
+    const newId = (maxId + 1).toString();
+
+    const newItem = {
+      id: newId,
+      name: data.name,
+      width: data.width.toString(),
+      height: data.height.toString(),
+      depth: data.depth.toString(),
+      weight: data.weight.toString(),
+      category: data.category,
+      importance: data.importance.toString(),
+      is_active: "true",
+    };
+
+    rawItems.push(newItem);
+    await writeCSV("travel-items.csv", rawItems);
+
+    return {
+      id: newId,
+      name: data.name,
+      width: data.width,
+      height: data.height,
+      depth: data.depth,
+      weight: data.weight,
+      category: data.category,
+      importance: data.importance,
+      isActive: true,
+    };
+  } catch (error) {
+    console.error("Error creating travel item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 준비물 아이템 수정
+ */
+export async function updateTravelItem(
+  itemId: string,
+  data: {
+    name?: string;
+    category?: string;
+    importance?: number;
+    width?: number;
+    height?: number;
+    depth?: number;
+    weight?: number;
+  }
+): Promise<void> {
+  try {
+    const rawItems = await readCSV<any>("travel-items.csv");
+    const itemIndex = rawItems.findIndex((item) => item.id === itemId);
+
+    if (itemIndex === -1) {
+      throw new Error("아이템을 찾을 수 없습니다.");
+    }
+
+    if (data.name !== undefined) rawItems[itemIndex].name = data.name;
+    if (data.category !== undefined) rawItems[itemIndex].category = data.category;
+    if (data.importance !== undefined) rawItems[itemIndex].importance = data.importance.toString();
+    if (data.width !== undefined) rawItems[itemIndex].width = data.width.toString();
+    if (data.height !== undefined) rawItems[itemIndex].height = data.height.toString();
+    if (data.depth !== undefined) rawItems[itemIndex].depth = data.depth.toString();
+    if (data.weight !== undefined) rawItems[itemIndex].weight = data.weight.toString();
+
+    await writeCSV("travel-items.csv", rawItems);
+  } catch (error) {
+    console.error("Error updating travel item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 준비물 아이템 삭제 (소프트 삭제)
+ */
+export async function deleteTravelItem(itemId: string): Promise<void> {
+  try {
+    const rawItems = await readCSV<any>("travel-items.csv");
+    const itemIndex = rawItems.findIndex((item) => item.id === itemId);
+
+    if (itemIndex === -1) {
+      throw new Error("아이템을 찾을 수 없습니다.");
+    }
+
+    // 소프트 삭제
+    rawItems[itemIndex].is_active = "false";
+
+    await writeCSV("travel-items.csv", rawItems);
+  } catch (error) {
+    console.error("Error deleting travel item:", error);
+    throw error;
+  }
+}
+
+/**
  * 가방 마스터 데이터 조회
  */
 export async function getBags(activeOnly = true): Promise<Bag[]> {
@@ -335,6 +444,104 @@ export async function getBags(activeOnly = true): Promise<Bag[]> {
   } catch (error) {
     console.error("Error reading bags:", error);
     return [];
+  }
+}
+
+/**
+ * 가방 생성
+ */
+export async function createBag(data: {
+  name: string;
+  width: number;
+  height: number;
+  depth: number;
+  weight: number;
+}): Promise<Bag> {
+  try {
+    const rawBags = await readCSV<any>("bags.csv");
+    const maxId = rawBags.reduce((max, bag) => Math.max(max, parseInt(bag.id) || 0), 0);
+    const newId = (maxId + 1).toString();
+
+    const newBag = {
+      id: newId,
+      name: data.name,
+      width: data.width.toString(),
+      height: data.height.toString(),
+      depth: data.depth.toString(),
+      weight: data.weight.toString(),
+      is_active: "true",
+    };
+
+    rawBags.push(newBag);
+    await writeCSV("bags.csv", rawBags);
+
+    return {
+      id: newId,
+      name: data.name,
+      width: data.width,
+      height: data.height,
+      depth: data.depth,
+      weight: data.weight,
+      isActive: true,
+    };
+  } catch (error) {
+    console.error("Error creating bag:", error);
+    throw error;
+  }
+}
+
+/**
+ * 가방 수정
+ */
+export async function updateBag(
+  bagId: string,
+  data: {
+    name?: string;
+    width?: number;
+    height?: number;
+    depth?: number;
+    weight?: number;
+  }
+): Promise<void> {
+  try {
+    const rawBags = await readCSV<any>("bags.csv");
+    const bagIndex = rawBags.findIndex((bag) => bag.id === bagId);
+
+    if (bagIndex === -1) {
+      throw new Error("가방을 찾을 수 없습니다.");
+    }
+
+    if (data.name !== undefined) rawBags[bagIndex].name = data.name;
+    if (data.width !== undefined) rawBags[bagIndex].width = data.width.toString();
+    if (data.height !== undefined) rawBags[bagIndex].height = data.height.toString();
+    if (data.depth !== undefined) rawBags[bagIndex].depth = data.depth.toString();
+    if (data.weight !== undefined) rawBags[bagIndex].weight = data.weight.toString();
+
+    await writeCSV("bags.csv", rawBags);
+  } catch (error) {
+    console.error("Error updating bag:", error);
+    throw error;
+  }
+}
+
+/**
+ * 가방 삭제 (소프트 삭제)
+ */
+export async function deleteBag(bagId: string): Promise<void> {
+  try {
+    const rawBags = await readCSV<any>("bags.csv");
+    const bagIndex = rawBags.findIndex((bag) => bag.id === bagId);
+
+    if (bagIndex === -1) {
+      throw new Error("가방을 찾을 수 없습니다.");
+    }
+
+    // 소프트 삭제
+    rawBags[bagIndex].is_active = "false";
+    await writeCSV("bags.csv", rawBags);
+  } catch (error) {
+    console.error("Error deleting bag:", error);
+    throw error;
   }
 }
 
@@ -445,6 +652,7 @@ export async function getTripItems(tripListId: string): Promise<TripItem[]> {
         itemType: item.item_type as "item" | "bag",
         bagId: item.bag_id || undefined,
         isPrepared: item.is_prepared === "true",
+        quantity: parseInt(item.quantity) || 1,
         order: parseInt(item.order),
       }))
       .sort((a, b) => a.order - b.order);
@@ -479,6 +687,7 @@ export async function addTripItem(data: {
       item_type: data.itemType,
       bag_id: data.bagId || "",
       is_prepared: "false",
+      quantity: "1",
       order: (maxOrder + 1).toString(),
     };
 
@@ -492,6 +701,7 @@ export async function addTripItem(data: {
       itemType: data.itemType,
       bagId: data.bagId,
       isPrepared: false,
+      quantity: 1,
       order: maxOrder + 1,
     };
   } catch (error) {
@@ -501,9 +711,71 @@ export async function addTripItem(data: {
 }
 
 /**
- * 여행 아이템 업데이트 (준비 상태, 가방 할당 등)
+ * 여행에 여러 아이템을 배치로 추가 (한 번에 CSV 쓰기)
  */
-export async function updateTripItem(itemId: string, updates: { bagId?: string; isPrepared?: boolean }): Promise<void> {
+export async function addTripItemsBatch(
+  tripListId: string,
+  items: Array<{ itemId: string; itemType: "item" | "bag"; bagId?: string }>
+): Promise<TripItem[]> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+
+    // 최대 ID와 order 계산
+    const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
+    const tripItems = rawItems.filter((item) => item.trip_list_id === tripListId);
+    const maxOrder = tripItems.reduce((max, item) => Math.max(max, parseInt(item.order) || 0), 0);
+
+    const newItems: TripItem[] = [];
+    const newRawItems: any[] = [];
+
+    // 모든 새 아이템 생성
+    items.forEach((item, index) => {
+      const newId = (maxId + index + 1).toString();
+      const order = maxOrder + index + 1;
+
+      const newRawItem = {
+        id: newId,
+        trip_list_id: tripListId,
+        item_id: item.itemId,
+        item_type: item.itemType,
+        bag_id: item.bagId || "",
+        is_prepared: "false",
+        quantity: "1",
+        order: order.toString(),
+      };
+
+      newRawItems.push(newRawItem);
+
+      newItems.push({
+        id: newId,
+        tripListId: tripListId,
+        itemId: item.itemId,
+        itemType: item.itemType,
+        bagId: item.bagId,
+        isPrepared: false,
+        quantity: 1,
+        order: order,
+      });
+    });
+
+    // 한 번에 모든 아이템 추가하고 CSV 쓰기
+    rawItems.push(...newRawItems);
+    await writeCSV("trip-items.csv", rawItems);
+
+    return newItems;
+  } catch (error) {
+    console.error("Error adding trip items batch:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 아이템 업데이트 (준비 상태, 가방 할당, 수량 등)
+ */
+export async function updateTripItem(
+  itemId: string,
+  updates: { bagId?: string; isPrepared?: boolean; quantity?: number }
+): Promise<void> {
   try {
     const rawItems = await readCSV<any>("trip-items.csv");
     const itemIndex = rawItems.findIndex((item) => item.id === itemId);
@@ -517,6 +789,9 @@ export async function updateTripItem(itemId: string, updates: { bagId?: string; 
     }
     if (updates.isPrepared !== undefined) {
       rawItems[itemIndex].is_prepared = updates.isPrepared ? "true" : "false";
+    }
+    if (updates.quantity !== undefined) {
+      rawItems[itemIndex].quantity = updates.quantity.toString();
     }
 
     await writeCSV("trip-items.csv", rawItems);
@@ -541,6 +816,58 @@ export async function deleteTripItem(itemId: string): Promise<void> {
     await writeCSV("trip-items.csv", filteredItems);
   } catch (error) {
     console.error("Error deleting trip item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 아이템 배치 삭제
+ */
+export async function deleteTripItemsBatch(itemIds: string[]): Promise<number> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const itemIdsSet = new Set(itemIds);
+    const filteredItems = rawItems.filter((item) => !itemIdsSet.has(item.id));
+
+    const deletedCount = rawItems.length - filteredItems.length;
+
+    if (deletedCount === 0) {
+      throw new Error("삭제할 아이템을 찾을 수 없습니다.");
+    }
+
+    await writeCSV("trip-items.csv", filteredItems);
+    return deletedCount;
+  } catch (error) {
+    console.error("Error deleting trip items batch:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 아이템 배치 가방 변경
+ */
+export async function updateTripItemsBagBatch(itemIds: string[], newBagId: string): Promise<number> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const itemIdsSet = new Set(itemIds);
+    let updatedCount = 0;
+
+    const updatedItems = rawItems.map((item) => {
+      if (itemIdsSet.has(item.id)) {
+        updatedCount++;
+        return { ...item, bag_id: newBagId };
+      }
+      return item;
+    });
+
+    if (updatedCount === 0) {
+      throw new Error("업데이트할 아이템을 찾을 수 없습니다.");
+    }
+
+    await writeCSV("trip-items.csv", updatedItems);
+    return updatedCount;
+  } catch (error) {
+    console.error("Error updating trip items bag batch:", error);
     throw error;
   }
 }

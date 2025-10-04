@@ -25,7 +25,7 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-gray-900">{bag.name}</h3>
         <span className={`text-sm font-medium ${isOverloaded ? "text-red-600" : "text-gray-600"}`}>
-          {totalWeight.toFixed(1)}kg
+          {(totalWeight / 1000).toFixed(2)}kg
         </span>
       </div>
 
@@ -50,11 +50,10 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
       {/* 상세 정보 (선택적) */}
       {showDetails && (
         <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="text-xs text-gray-500 space-y-1">
+          <div className="flex items-center justify-between text-xs text-gray-500">
             <div>
               크기: {bag.width}×{bag.height}×{bag.depth}cm
             </div>
-            <div>아이템: {stats.items.length}개</div>
             <div>
               준비 완료: {stats.items.filter((item) => item.isPrepared).length}/{stats.items.length}
             </div>

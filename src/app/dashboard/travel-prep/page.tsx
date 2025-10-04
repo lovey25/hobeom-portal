@@ -24,6 +24,7 @@ export default function TravelPrepPage() {
   const [filter, setFilter] = useState<TripItemFilter>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBagId, setSelectedBagId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -183,6 +184,74 @@ export default function TravelPrepPage() {
     }
   };
 
+  // 선택된 아이템들의 가방을 일괄 변경
+  const changeSelectedItemsBag = async (newBagId: string) => {
+    try {
+      const token = cookieUtils.getToken();
+      const itemIds = Array.from(selectedItemIds);
+
+      const res = await fetch("/api/travel-prep/trip-items/batch-update-bag", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          itemIds,
+          bagId: newBagId,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        // 선택 해제 및 데이터 새로고침
+        setSelectedItemIds(new Set());
+        await loadTripData();
+      } else {
+        alert(`가방 변경 실패: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("가방 일괄 변경 실패:", error);
+      alert("가방 변경 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 아이템 선택 토글
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItemIds);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItemIds(newSelection);
+  };
+
+  // 아이템 수량 변경
+  const changeItemQuantity = async (itemId: string, newQuantity: number) => {
+    try {
+      const token = cookieUtils.getToken();
+      const res = await fetch("/api/travel-prep/trip-items", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          itemId,
+          quantity: newQuantity,
+        }),
+      });
+
+      if (res.ok) {
+        await loadTripData();
+      }
+    } catch (error) {
+      console.error("수량 변경 실패:", error);
+    }
+  };
+
   // 아이템 삭제
   const removeItem = async (itemId: string) => {
     if (!confirm("이 아이템을 삭제하시겠습니까?")) return;
@@ -200,6 +269,49 @@ export default function TravelPrepPage() {
     } catch (error) {
       console.error("아이템 삭제 실패:", error);
     }
+  };
+
+  // 선택된 아이템들 일괄 삭제
+  const removeSelectedItems = async () => {
+    if (selectedItemIds.size === 0) {
+      alert("삭제할 아이템을 선택해주세요.");
+      return;
+    }
+
+    if (!confirm(`선택된 ${selectedItemIds.size}개의 아이템을 삭제하시겠습니까?`)) return;
+
+    try {
+      const token = cookieUtils.getToken();
+      const itemIds = Array.from(selectedItemIds).join(",");
+
+      const res = await fetch(`/api/travel-prep/trip-items/batch-delete?itemIds=${itemIds}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setSelectedItemIds(new Set());
+        await loadTripData();
+      } else {
+        alert(`삭제 실패: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("아이템 일괄 삭제 실패:", error);
+      alert("아이템 삭제 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 모든 아이템 선택
+  const selectAllItems = () => {
+    const allItemIds = filteredItems.map((tripItem) => tripItem.id);
+    setSelectedItemIds(new Set(allItemIds));
+  };
+
+  // 선택 해제
+  const deselectAllItems = () => {
+    setSelectedItemIds(new Set());
   };
 
   const filteredItems = getFilteredItems();
@@ -255,7 +367,14 @@ export default function TravelPrepPage() {
           <div className="mb-6">
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">가방</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">가방</h2>
+                  {selectedItemIds.size > 0 && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      {selectedItemIds.size}개 선택됨 - 이동할 가방을 클릭하세요
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={() => router.push(`/dashboard/travel-prep/bags?tripId=${currentTrip.id}`)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -277,11 +396,23 @@ export default function TravelPrepPage() {
                       stats={stats}
                       isSelected={selectedBagId === stats.bagId}
                       onClick={() => {
-                        setSelectedBagId(selectedBagId === stats.bagId ? null : stats.bagId);
-                        setFilter({
-                          ...filter,
-                          bagId: selectedBagId === stats.bagId ? undefined : stats.bagId,
-                        });
+                        if (selectedItemIds.size > 0) {
+                          // 선택된 아이템이 있으면 가방 이동
+                          if (
+                            confirm(
+                              `선택된 ${selectedItemIds.size}개 아이템을 "${stats.bag.name}"(으)로 이동하시겠습니까?`
+                            )
+                          ) {
+                            changeSelectedItemsBag(stats.bagId);
+                          }
+                        } else {
+                          // 선택된 아이템이 없으면 필터링
+                          setSelectedBagId(selectedBagId === stats.bagId ? null : stats.bagId);
+                          setFilter({
+                            ...filter,
+                            bagId: selectedBagId === stats.bagId ? undefined : stats.bagId,
+                          });
+                        }
                       }}
                       showDetails={true}
                     />
@@ -303,7 +434,54 @@ export default function TravelPrepPage() {
           <div className="mt-6">
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">준비물 ({filteredItems.length}개)</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">준비물 ({filteredItems.length}개)</h2>
+                  <button
+                    onClick={() => {
+                      if (filter.bagId === "unassigned") {
+                        // 미배정 필터 해제
+                        setFilter({ ...filter, bagId: undefined });
+                      } else {
+                        // 미배정 필터 활성화
+                        setFilter({ ...filter, bagId: "unassigned" });
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      filter.bagId === "unassigned"
+                        ? "bg-orange-600 text-white hover:bg-orange-700"
+                        : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
+                    }`}
+                  >
+                    {filter.bagId === "unassigned" ? "✓ 미배정" : "미배정"}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  {selectedItemIds.size > 0 ? (
+                    <>
+                      <button
+                        onClick={removeSelectedItems}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        삭제 ({selectedItemIds.size})
+                      </button>
+                      <button
+                        onClick={deselectAllItems}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        선택 해제
+                      </button>
+                    </>
+                  ) : (
+                    filteredItems.length > 0 && (
+                      <button
+                        onClick={selectAllItems}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        모두 선택
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
 
               {filteredItems.length === 0 ? (
@@ -318,6 +496,7 @@ export default function TravelPrepPage() {
                     if (!travelItem) return null;
 
                     const bag = bagStats.find((s) => s.bagId === tripItem.bagId);
+                    const isSelected = selectedItemIds.has(tripItem.id);
 
                     return (
                       <ItemCard
@@ -325,14 +504,12 @@ export default function TravelPrepPage() {
                         item={travelItem}
                         isPrepared={tripItem.isPrepared}
                         bagName={bag?.bag.name}
+                        quantity={tripItem.quantity}
                         onTogglePrepared={() => toggleItemPrepared(tripItem.id, tripItem.isPrepared)}
-                        onChangeBag={() => {
-                          const newBagId = prompt(
-                            "가방 ID를 입력하세요:\n" + bagStats.map((s) => `${s.bagId}: ${s.bag.name}`).join("\n")
-                          );
-                          if (newBagId) changeItemBag(tripItem.id, newBagId);
-                        }}
+                        onChangeBag={() => toggleItemSelection(tripItem.id)}
+                        onQuantityChange={(newQuantity) => changeItemQuantity(tripItem.id, newQuantity)}
                         onRemove={() => removeItem(tripItem.id)}
+                        isSelected={isSelected}
                       />
                     );
                   })}

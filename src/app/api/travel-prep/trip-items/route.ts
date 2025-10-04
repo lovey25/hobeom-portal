@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTripItems, addTripItem, updateTripItem, deleteTripItem, calculateBagStats } from "@/lib/data";
+import {
+  getTripItems,
+  addTripItem,
+  addTripItemsBatch,
+  updateTripItem,
+  deleteTripItem,
+  calculateBagStats,
+} from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
 
@@ -120,7 +127,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { itemId, bagId, isPrepared } = body;
+    const { itemId, bagId, isPrepared, quantity } = body;
 
     if (!itemId) {
       const response: ApiResponse = {
@@ -130,7 +137,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    await updateTripItem(itemId, { bagId, isPrepared });
+    await updateTripItem(itemId, { bagId, isPrepared, quantity });
 
     const response: ApiResponse = {
       success: true,

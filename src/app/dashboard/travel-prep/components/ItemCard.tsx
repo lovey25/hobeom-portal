@@ -5,24 +5,30 @@ interface ItemCardProps {
   item: TravelItem;
   isPrepared?: boolean;
   bagName?: string;
+  quantity?: number;
   onTogglePrepared?: () => void;
   onChangeBag?: () => void;
   onRemove?: () => void;
+  onQuantityChange?: (newQuantity: number) => void;
   isSelectable?: boolean;
   isSelected?: boolean;
   onSelect?: () => void;
+  showWeightInGrams?: boolean; // true면 g 단위로 표시, false면 kg 단위로 표시
 }
 
 export function ItemCard({
   item,
   isPrepared,
   bagName,
+  quantity = 1,
   onTogglePrepared,
   onChangeBag,
   onRemove,
+  onQuantityChange,
   isSelectable,
   isSelected,
   onSelect,
+  showWeightInGrams = false,
 }: ItemCardProps) {
   const getImportanceColor = (importance: number) => {
     if (importance >= 5) return "text-red-600 bg-red-50";
@@ -39,20 +45,41 @@ export function ItemCard({
     return "선택";
   };
 
+  // 클릭 핸들러 결정 (onSelect가 있으면 우선, 없으면 onChangeBag)
+  const handleClick = onSelect || onChangeBag;
+
   return (
     <div
       className={`
         relative p-4 bg-white rounded-lg border transition-all duration-200
         ${isPrepared ? "border-green-300 bg-green-50" : "border-gray-200"}
-        ${isSelectable ? "cursor-pointer hover:border-blue-300" : ""}
-        ${isSelected ? "border-blue-500 shadow-md" : ""}
+        ${handleClick ? "cursor-pointer hover:border-blue-300 hover:shadow-md" : ""}
+        ${isSelected ? "border-blue-500 bg-blue-50 shadow-md" : ""}
       `}
-      onClick={isSelectable ? onSelect : undefined}
+      onClick={
+        handleClick
+          ? (e) => {
+              // 버튼 클릭이 아닌 경우에만 선택 토글
+              if (!(e.target as HTMLElement).closest("button")) {
+                handleClick();
+              }
+            }
+          : undefined
+      }
     >
-      <div className="flex items-start justify-between">
+      {/* 선택 표시 체크박스 */}
+      {isSelected && (
+        <div className="absolute top-2 right-2">
+          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+            <span className="text-white text-sm font-bold">✓</span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-stretch justify-between gap-3">
         {/* 아이템 정보 */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <h4 className="font-medium text-gray-900">{item.name}</h4>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${getImportanceColor(item.importance)}`}>
               {getImportanceText(item.importance)}
@@ -61,56 +88,84 @@ export function ItemCard({
 
           <div className="text-xs text-gray-500 space-y-1">
             <div>
-              크기: {item.width}×{item.height}×{item.depth}cm | 무게: {item.weight}kg
+              크기: {item.width}×{item.height}×{item.depth}cm | 무게:{" "}
+              {showWeightInGrams ? `${item.weight}g` : `${(item.weight / 1000).toFixed(2)}kg`}
+              {quantity > 1 && (
+                <span className="ml-2 text-blue-600 font-medium">
+                  (총{" "}
+                  {showWeightInGrams
+                    ? `${item.weight * quantity}g`
+                    : `${((item.weight * quantity) / 1000).toFixed(2)}kg`}
+                  )
+                </span>
+              )}
             </div>
             <div>분류: {item.category}</div>
             {bagName && <div className="text-blue-600 font-medium">가방: {bagName}</div>}
           </div>
         </div>
 
-        {/* 액션 버튼 */}
+        {/* 액션 버튼 영역 */}
         {!isSelectable && (
-          <div className="flex flex-col gap-1 ml-2">
+          <div className="flex items-stretch gap-2 flex-shrink-0">
+            {/* 수량 조절 */}
+            {onQuantityChange && (
+              <div className="flex flex-col gap-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuantityChange(quantity + 1);
+                  }}
+                  className="flex-1 w-12 flex items-center justify-center bg-white text-gray-700 rounded-md hover:bg-gray-200 active:bg-gray-300 transition-colors shadow-sm font-bold text-lg"
+                >
+                  +
+                </button>
+                <span className="px-2 text-base font-semibold text-gray-900 text-center min-w-[3rem]">{quantity}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (quantity > 1) onQuantityChange(quantity - 1);
+                  }}
+                  className="flex-1 w-12 flex items-center justify-center bg-white text-gray-700 rounded-md hover:bg-gray-200 active:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-bold text-lg"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+              </div>
+            )}
+
+            {/* 준비 상태 토글 */}
             {onTogglePrepared && (
               <button
-                onClick={onTogglePrepared}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePrepared();
+                }}
                 className={`
-                  px-3 py-1 rounded text-xs font-medium transition-colors
+                  px-3 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap
                   ${
                     isPrepared
-                      ? "bg-green-500 text-white hover:bg-green-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400"
                   }
                 `}
               >
                 {isPrepared ? "✓ 완료" : "준비중"}
               </button>
             )}
-            {onChangeBag && (
-              <button
-                onClick={onChangeBag}
-                className="px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-              >
-                가방변경
-              </button>
-            )}
+
+            {/* 삭제 버튼 */}
             {onRemove && (
               <button
-                onClick={onRemove}
-                className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                className="px-3 py-2.5 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300 transition-colors shadow-sm whitespace-nowrap"
               >
                 삭제
               </button>
             )}
-          </div>
-        )}
-
-        {/* 선택 표시 */}
-        {isSelectable && isSelected && (
-          <div className="ml-2">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm">✓</span>
-            </div>
           </div>
         )}
       </div>

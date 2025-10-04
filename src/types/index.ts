@@ -80,7 +80,7 @@ export interface TravelItem {
   width: number; // cm
   height: number; // cm
   depth: number; // cm
-  weight: number; // kg
+  weight: number; // g (그램)
   category: string; // 의류, 전자기기, 세면도구 등
   importance: number; // 1-5 (1: 낮음, 5: 높음)
   isActive: boolean;
@@ -95,7 +95,7 @@ export interface Bag {
   width: number; // cm
   height: number; // cm
   depth: number; // cm
-  weight: number; // kg (빈 가방 무게)
+  weight: number; // g (빈 가방 무게)
   isActive: boolean;
 }
 
@@ -123,6 +123,7 @@ export interface TripItem {
   itemType: "item" | "bag";
   bagId?: string; // 어느 가방에 담았는지 (item인 경우만)
   isPrepared: boolean;
+  quantity: number; // 아이템 수량 (기본값: 1)
   order: number;
 }
 
