@@ -3,7 +3,7 @@ import { getAllUsers, updateUser, deleteUser } from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // JWT 토큰 검증 및 관리자 권한 확인
     const token = request.headers.get("authorization")?.replace("Bearer ", "");
@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     const { role } = await request.json();
-    const userId = params.id;
+    const { id: userId } = await params;
 
     if (!role || !["admin", "user"].includes(role)) {
       const response: ApiResponse = {
@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // JWT 토큰 검증 및 관리자 권한 확인
     const token = request.headers.get("authorization")?.replace("Bearer ", "");
@@ -75,7 +75,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json(response, { status: 403 });
     }
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // 자기 자신을 삭제하려는 경우 방지
     if (decoded.id === userId) {

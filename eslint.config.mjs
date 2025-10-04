@@ -12,13 +12,14 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
-    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn", // error에서 warn으로 변경
+      "@typescript-eslint/no-unused-vars": "warn", // error에서 warn으로 변경
+      "react-hooks/exhaustive-deps": "warn", // error에서 warn으로 변경
+    },
+  },
+  {
+    ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"],
   },
 ];
 

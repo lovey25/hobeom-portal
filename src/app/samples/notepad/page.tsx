@@ -22,10 +22,12 @@ export default function NotepadPage() {
     // 로컬 스토리지에서 노트 불러오기
     const savedNotes = localStorage.getItem("notepad-notes");
     if (savedNotes) {
-      const parsedNotes = JSON.parse(savedNotes).map((note: any) => ({
-        ...note,
-        createdAt: new Date(note.createdAt),
-      }));
+      const parsedNotes = JSON.parse(savedNotes).map(
+        (note: { id: string; title: string; content: string; createdAt: string }) => ({
+          ...note,
+          createdAt: new Date(note.createdAt),
+        })
+      );
       setNotes(parsedNotes);
     }
   }, []);
