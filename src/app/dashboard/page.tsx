@@ -1,88 +1,71 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { AppIconGrid } from "@/components/AppIconGrid";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppIcon } from "@/types";
-
-// 임시로 하드코딩된 앱 데이터 (나중에 API에서 가져올 예정)
-const dashboardApps: AppIcon[] = [
-  {
-    id: "4",
-    name: "할일관리",
-    description: "개인 할일 관리 시스템",
-    icon: "✅",
-    href: "/dashboard/todo",
-    requireAuth: true,
-    category: "dashboard",
-    order: 1,
-    isActive: true,
-  },
-  {
-    id: "5",
-    name: "파일관리",
-    description: "파일 업로드 및 관리",
-    icon: "📁",
-    href: "/dashboard/files",
-    requireAuth: true,
-    category: "dashboard",
-    order: 2,
-    isActive: true,
-  },
-  {
-    id: "6",
-    name: "데이터분석",
-    description: "CSV 데이터 분석 도구",
-    icon: "📊",
-    href: "/dashboard/analytics",
-    requireAuth: true,
-    category: "dashboard",
-    order: 3,
-    isActive: true,
-  },
-  {
-    id: "7",
-    name: "설정",
-    description: "사용자 설정 및 프로필",
-    icon: "⚙️",
-    href: "/dashboard/settings",
-    requireAuth: true,
-    category: "dashboard",
-    order: 4,
-    isActive: true,
-  },
-];
-
-const adminApps: AppIcon[] = [
-  {
-    id: "8",
-    name: "사용자관리",
-    description: "사용자 및 권한 관리",
-    icon: "👥",
-    href: "/dashboard/users",
-    requireAuth: true,
-    category: "admin",
-    order: 1,
-    isActive: true,
-  },
-  {
-    id: "9",
-    name: "시스템로그",
-    description: "시스템 로그 모니터링",
-    icon: "📋",
-    href: "/dashboard/logs",
-    requireAuth: true,
-    category: "admin",
-    order: 2,
-    isActive: true,
-  },
-];
+import { cookieUtils } from "@/lib/cookies";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [dashboardApps, setDashboardApps] = useState<AppIcon[]>([]);
+  const [adminApps, setAdminApps] = useState<AppIcon[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadApps();
+  }, []);
+
+  const loadApps = async () => {
+    try {
+      const token = cookieUtils.getToken();
+
+      // 대시보드 앱 로드
+      const dashboardRes = await fetch("/api/apps?category=dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dashboardData = await dashboardRes.json();
+
+      if (dashboardData.success) {
+        setDashboardApps(dashboardData.data);
+      }
+
+      // 관리자 앱 로드
+      const adminRes = await fetch("/api/apps?category=admin", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const adminData = await adminRes.json();
+
+      if (adminData.success) {
+        setAdminApps(adminData.data);
+      }
+    } catch (error) {
+      console.error("앱 목록 로드 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gray-50">
+          <DashboardHeader />
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">로딩 중...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute>

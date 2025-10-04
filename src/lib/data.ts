@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import csvParser from "csv-parser";
-import { User, AppIcon } from "@/types";
+import { User, AppIcon, TravelTypeTemplate, TravelItem, Bag, TripList, TripItem, BagStats } from "@/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -267,5 +267,337 @@ export async function updateUserLastLogin(userId: string): Promise<void> {
   } catch (error) {
     console.error("Error updating user last login:", error);
     throw error;
+  }
+}
+
+// ============================================
+// Travel Prep Data Functions
+// ============================================
+
+/**
+ * 여행 종류 템플릿 목록 조회
+ */
+export async function getTravelTypes(): Promise<TravelTypeTemplate[]> {
+  try {
+    const rawTypes = await readCSV<any>("travel-types.csv");
+    return rawTypes.map((t) => ({
+      id: t.id,
+      name: t.name,
+      days: parseInt(t.days),
+      type: t.type as "여행" | "출장",
+    }));
+  } catch (error) {
+    console.error("Error reading travel types:", error);
+    return [];
+  }
+}
+
+/**
+ * 여행 준비물 마스터 데이터 조회
+ */
+export async function getTravelItems(activeOnly = true): Promise<TravelItem[]> {
+  try {
+    const rawItems = await readCSV<any>("travel-items.csv");
+    const items = rawItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      width: parseFloat(item.width),
+      height: parseFloat(item.height),
+      depth: parseFloat(item.depth),
+      weight: parseFloat(item.weight),
+      category: item.category,
+      importance: parseInt(item.importance),
+      isActive: item.is_active === "true",
+    }));
+    return activeOnly ? items.filter((item) => item.isActive) : items;
+  } catch (error) {
+    console.error("Error reading travel items:", error);
+    return [];
+  }
+}
+
+/**
+ * 가방 마스터 데이터 조회
+ */
+export async function getBags(activeOnly = true): Promise<Bag[]> {
+  try {
+    const rawBags = await readCSV<any>("bags.csv");
+    const bags = rawBags.map((bag) => ({
+      id: bag.id,
+      name: bag.name,
+      width: parseFloat(bag.width),
+      height: parseFloat(bag.height),
+      depth: parseFloat(bag.depth),
+      weight: parseFloat(bag.weight),
+      isActive: bag.is_active === "true",
+    }));
+    return activeOnly ? bags.filter((bag) => bag.isActive) : bags;
+  } catch (error) {
+    console.error("Error reading bags:", error);
+    return [];
+  }
+}
+
+/**
+ * 특정 사용자의 여행 리스트 조회
+ */
+export async function getTripLists(userId: string): Promise<TripList[]> {
+  try {
+    const rawLists = await readCSV<any>("trip-lists.csv");
+    const userLists = rawLists
+      .filter((list) => list.user_id === userId)
+      .map((list) => ({
+        id: list.id,
+        userId: list.user_id,
+        travelTypeId: list.travel_type_id || undefined,
+        name: list.name,
+        days: parseInt(list.days),
+        type: list.type as "여행" | "출장",
+        createdAt: list.created_at,
+        lastUsed: list.last_used,
+      }))
+      .sort((a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime());
+    return userLists;
+  } catch (error) {
+    console.error("Error reading trip lists:", error);
+    return [];
+  }
+}
+
+/**
+ * 여행 리스트 생성
+ */
+export async function createTripList(data: {
+  userId: string;
+  travelTypeId?: string;
+  name: string;
+  days: number;
+  type: "여행" | "출장";
+}): Promise<TripList> {
+  try {
+    const rawLists = await readCSV<any>("trip-lists.csv");
+    const maxId = rawLists.reduce((max, list) => Math.max(max, parseInt(list.id) || 0), 0);
+    const newId = (maxId + 1).toString();
+    const now = new Date().toISOString();
+
+    const newList = {
+      id: newId,
+      user_id: data.userId,
+      travel_type_id: data.travelTypeId || "",
+      name: data.name,
+      days: data.days.toString(),
+      type: data.type,
+      created_at: now,
+      last_used: now,
+    };
+
+    rawLists.push(newList);
+    await writeCSV("trip-lists.csv", rawLists);
+
+    return {
+      id: newId,
+      userId: data.userId,
+      travelTypeId: data.travelTypeId,
+      name: data.name,
+      days: data.days,
+      type: data.type,
+      createdAt: now,
+      lastUsed: now,
+    };
+  } catch (error) {
+    console.error("Error creating trip list:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 리스트 마지막 사용 시간 업데이트
+ */
+export async function updateTripListLastUsed(tripListId: string): Promise<void> {
+  try {
+    const rawLists = await readCSV<any>("trip-lists.csv");
+    const listIndex = rawLists.findIndex((list) => list.id === tripListId);
+
+    if (listIndex === -1) {
+      throw new Error("여행 리스트를 찾을 수 없습니다.");
+    }
+
+    rawLists[listIndex].last_used = new Date().toISOString();
+    await writeCSV("trip-lists.csv", rawLists);
+  } catch (error) {
+    console.error("Error updating trip list last used:", error);
+    throw error;
+  }
+}
+
+/**
+ * 특정 여행의 아이템 목록 조회
+ */
+export async function getTripItems(tripListId: string): Promise<TripItem[]> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    return rawItems
+      .filter((item) => item.trip_list_id === tripListId)
+      .map((item) => ({
+        id: item.id,
+        tripListId: item.trip_list_id,
+        itemId: item.item_id,
+        itemType: item.item_type as "item" | "bag",
+        bagId: item.bag_id || undefined,
+        isPrepared: item.is_prepared === "true",
+        order: parseInt(item.order),
+      }))
+      .sort((a, b) => a.order - b.order);
+  } catch (error) {
+    console.error("Error reading trip items:", error);
+    return [];
+  }
+}
+
+/**
+ * 여행에 아이템 추가 (가방 또는 준비물)
+ */
+export async function addTripItem(data: {
+  tripListId: string;
+  itemId: string;
+  itemType: "item" | "bag";
+  bagId?: string;
+}): Promise<TripItem> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
+    const newId = (maxId + 1).toString();
+
+    // 해당 여행의 최대 order 값 찾기
+    const tripItems = rawItems.filter((item) => item.trip_list_id === data.tripListId);
+    const maxOrder = tripItems.reduce((max, item) => Math.max(max, parseInt(item.order) || 0), 0);
+
+    const newItem = {
+      id: newId,
+      trip_list_id: data.tripListId,
+      item_id: data.itemId,
+      item_type: data.itemType,
+      bag_id: data.bagId || "",
+      is_prepared: "false",
+      order: (maxOrder + 1).toString(),
+    };
+
+    rawItems.push(newItem);
+    await writeCSV("trip-items.csv", rawItems);
+
+    return {
+      id: newId,
+      tripListId: data.tripListId,
+      itemId: data.itemId,
+      itemType: data.itemType,
+      bagId: data.bagId,
+      isPrepared: false,
+      order: maxOrder + 1,
+    };
+  } catch (error) {
+    console.error("Error adding trip item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 아이템 업데이트 (준비 상태, 가방 할당 등)
+ */
+export async function updateTripItem(itemId: string, updates: { bagId?: string; isPrepared?: boolean }): Promise<void> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const itemIndex = rawItems.findIndex((item) => item.id === itemId);
+
+    if (itemIndex === -1) {
+      throw new Error("아이템을 찾을 수 없습니다.");
+    }
+
+    if (updates.bagId !== undefined) {
+      rawItems[itemIndex].bag_id = updates.bagId;
+    }
+    if (updates.isPrepared !== undefined) {
+      rawItems[itemIndex].is_prepared = updates.isPrepared ? "true" : "false";
+    }
+
+    await writeCSV("trip-items.csv", rawItems);
+  } catch (error) {
+    console.error("Error updating trip item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여행 아이템 삭제
+ */
+export async function deleteTripItem(itemId: string): Promise<void> {
+  try {
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const filteredItems = rawItems.filter((item) => item.id !== itemId);
+
+    if (rawItems.length === filteredItems.length) {
+      throw new Error("아이템을 찾을 수 없습니다.");
+    }
+
+    await writeCSV("trip-items.csv", filteredItems);
+  } catch (error) {
+    console.error("Error deleting trip item:", error);
+    throw error;
+  }
+}
+
+/**
+ * 가방별 통계 계산
+ */
+export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): Promise<BagStats[]> {
+  try {
+    const tripItems = await getTripItems(tripListId);
+    const allTravelItems = await getTravelItems(false);
+    const allBags = await getBags(false);
+
+    // 여행에 추가된 가방들
+    const bagItems = tripItems.filter((item) => item.itemType === "bag");
+    const stats: BagStats[] = [];
+
+    for (const bagItem of bagItems) {
+      const bag = allBags.find((b) => b.id === bagItem.itemId);
+      if (!bag) continue;
+
+      // 이 가방에 담긴 아이템들
+      const itemsInBag = tripItems.filter((item) => item.itemType === "item" && item.bagId === bagItem.itemId);
+
+      const itemsWithDetails = itemsInBag
+        .map((tripItem) => {
+          const travelItem = allTravelItems.find((ti) => ti.id === tripItem.itemId);
+          if (!travelItem) return null;
+          return {
+            ...travelItem,
+            isPrepared: tripItem.isPrepared,
+          };
+        })
+        .filter((item): item is TravelItem & { isPrepared: boolean } => item !== null);
+
+      // 무게 계산
+      const itemsWeight = itemsWithDetails.reduce((sum, item) => sum + item.weight, 0);
+      const totalWeight = bag.weight + itemsWeight;
+
+      // 부피 계산
+      const bagVolume = bag.width * bag.height * bag.depth;
+      const usedVolume = itemsWithDetails.reduce((sum, item) => sum + item.width * item.height * item.depth, 0);
+      const saturation = Math.min((usedVolume / bagVolume) * volumeRatio * 100, 100);
+
+      stats.push({
+        bagId: bag.id,
+        bag,
+        items: itemsWithDetails,
+        totalWeight,
+        totalVolume: usedVolume,
+        saturation,
+      });
+    }
+
+    return stats;
+  } catch (error) {
+    console.error("Error calculating bag stats:", error);
+    return [];
   }
 }

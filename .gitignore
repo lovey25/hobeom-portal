@@ -41,4 +41,5 @@ yarn-error.log*
 next-env.d.ts
 
 # data files (contains sensitive user information)
-/data/users.csv
+/data/*.csv
+!/data/*.sample.csv
