@@ -9,6 +9,7 @@ interface ItemCardProps {
   onTogglePrepared?: () => void;
   onChangeBag?: () => void;
   onRemove?: () => void;
+  onEdit?: () => void;
   onQuantityChange?: (newQuantity: number) => void;
   isSelectable?: boolean;
   isSelected?: boolean;
@@ -24,6 +25,7 @@ export function ItemCard({
   onTogglePrepared,
   onChangeBag,
   onRemove,
+  onEdit,
   onQuantityChange,
   isSelectable,
   isSelected,
@@ -105,7 +107,7 @@ export function ItemCard({
           </div>
         </div>
 
-        {/* 액션 버튼 영역 */}
+        {/* 액션 버튼 영역 - 세로 배치 */}
         {!isSelectable && (
           <div className="flex items-stretch gap-2 flex-shrink-0">
             {/* 수량 조절 */}
@@ -134,38 +136,54 @@ export function ItemCard({
               </div>
             )}
 
-            {/* 준비 상태 토글 */}
-            {onTogglePrepared && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePrepared();
-                }}
-                className={`
-                  px-3 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap
-                  ${
-                    isPrepared
-                      ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400"
-                  }
-                `}
-              >
-                {isPrepared ? "✓ 완료" : "준비중"}
-              </button>
-            )}
+            {/* 상태/액션 버튼 세로 배치 */}
+            <div className="flex flex-col gap-1">
+              {/* 준비 상태 토글 */}
+              {onTogglePrepared && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePrepared();
+                  }}
+                  className={`
+                    flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap
+                    ${
+                      isPrepared
+                        ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400"
+                    }
+                  `}
+                >
+                  {isPrepared ? "✓ 완료" : "준비중"}
+                </button>
+              )}
 
-            {/* 삭제 버튼 */}
-            {onRemove && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove();
-                }}
-                className="px-3 py-2.5 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300 transition-colors shadow-sm whitespace-nowrap"
-              >
-                삭제
-              </button>
-            )}
+              {/* 수정 버튼 */}
+              {onEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 active:bg-blue-300 transition-colors shadow-sm whitespace-nowrap"
+                >
+                  수정
+                </button>
+              )}
+
+              {/* 삭제 버튼 */}
+              {onRemove && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                  }}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300 transition-colors shadow-sm whitespace-nowrap"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

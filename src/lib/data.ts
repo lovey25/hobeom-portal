@@ -525,10 +525,11 @@ export async function updateBag(
 }
 
 /**
- * 가방 삭제 (소프트 삭제)
+ * 가방 삭제 (소프트 삭제 + 아이템 미배정 처리)
  */
 export async function deleteBag(bagId: string): Promise<void> {
   try {
+    // 가방 소프트 삭제
     const rawBags = await readCSV<any>("bags.csv");
     const bagIndex = rawBags.findIndex((bag) => bag.id === bagId);
 
@@ -536,9 +537,19 @@ export async function deleteBag(bagId: string): Promise<void> {
       throw new Error("가방을 찾을 수 없습니다.");
     }
 
-    // 소프트 삭제
     rawBags[bagIndex].is_active = "false";
     await writeCSV("bags.csv", rawBags);
+
+    // 해당 가방에 배정된 아이템들을 미배정 상태로 변경
+    const rawItems = await readCSV<any>("trip-items.csv");
+    const updatedItems = rawItems.map((item) => {
+      if (item.bag_id === bagId) {
+        return { ...item, bag_id: "" };
+      }
+      return item;
+    });
+
+    await writeCSV("trip-items.csv", updatedItems);
   } catch (error) {
     console.error("Error deleting bag:", error);
     throw error;

@@ -28,10 +28,10 @@ export function FilterBar({ filter, onFilterChange, bags, categories }: FilterBa
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex items-center gap-4">
         {/* 중요도 필터 */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600 whitespace-nowrap min-w-[60px]">중요도</label>
+        <div className="flex items-center gap-2 flex-1">
+          <label className="text-xs text-gray-600 whitespace-nowrap">중요도</label>
           <select
             value={filter.importance || "all"}
             onChange={(e) =>
@@ -52,8 +52,8 @@ export function FilterBar({ filter, onFilterChange, bags, categories }: FilterBa
         </div>
 
         {/* 분류 필터 */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600 whitespace-nowrap min-w-[60px]">분류</label>
+        <div className="flex items-center gap-2 flex-1">
+          <label className="text-xs text-gray-600 whitespace-nowrap">분류</label>
           <select
             value={filter.category || "all"}
             onChange={(e) =>
@@ -70,25 +70,6 @@ export function FilterBar({ filter, onFilterChange, bags, categories }: FilterBa
                 {cat}
               </option>
             ))}
-          </select>
-        </div>
-
-        {/* 준비 상태 필터 */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600 whitespace-nowrap min-w-[60px]">준비상태</label>
-          <select
-            value={filter.isPrepared === undefined ? "all" : filter.isPrepared ? "true" : "false"}
-            onChange={(e) =>
-              onFilterChange({
-                ...filter,
-                isPrepared: e.target.value === "all" ? undefined : e.target.value === "true",
-              })
-            }
-            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">전체</option>
-            <option value="true">준비완료</option>
-            <option value="false">준비중</option>
           </select>
         </div>
       </div>

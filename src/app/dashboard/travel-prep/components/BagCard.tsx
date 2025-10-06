@@ -5,10 +5,11 @@ interface BagCardProps {
   stats: BagStats;
   isSelected?: boolean;
   onClick?: () => void;
+  onDelete?: () => void;
   showDetails?: boolean;
 }
 
-export function BagCard({ stats, isSelected, onClick, showDetails = false }: BagCardProps) {
+export function BagCard({ stats, isSelected, onClick, onDelete, showDetails = false }: BagCardProps) {
   const { bag, totalWeight, saturation } = stats;
   const isOverloaded = saturation >= 100;
 
