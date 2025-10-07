@@ -2,78 +2,110 @@
 
 ## Project Overview
 
-This is a **Korean web portal platform** built with **Next.js 15**, **React 19**, and **TypeScript**. It provides public sample apps and protected dashboard features with role-based authentication (user/admin). The architecture uses **CSV-based data storage** for simplicity and **JWT authentication** with client-side session management.
+**Korean web portal platform** (Next.js 15 + React 19 + TypeScript) providing public sample apps and role-based dashboard features. Uses **CSV-based data storage** with JWT authentication.
 
-## Tech Stack & Key Dependencies
+## Tech Stack
 
-- **Next.js 15.5.4** with App Router and **Turbopack** (`--turbopack` flag MANDATORY - configured in package.json)
-- **React 19** with client-side auth context pattern (`src/contexts/AuthContext.tsx`)
-- **Authentication**: JWT tokens with `bcryptjs`, stored in cookies via `js-cookie`
-- **Data Layer**: CSV files (`csv-parser`, `papaparse`) in `/data/` directory with auto-initialization from `*.sample.csv`
-- **UI**: Tailwind CSS v4 with custom component library in `src/components/ui/`
+- **Next.js 15.5.4** App Router + **Turbopack** (MANDATORY `--turbopack` flag in all npm scripts)
+- **React 19** with client-side AuthContext pattern
+- **Auth**: JWT (`jsonwebtoken`) + bcrypt, stored in cookies (`js-cookie`)
+- **Data**: CSV files (`csv-parser`, `papaparse`) with auto-initialization from `*.sample.csv`
+- **UI**: Tailwind CSS v4 + custom components in `src/components/ui/`
 
-## Critical Architecture Patterns
+## Architecture Patterns
 
-### 1. Authentication Flow (3-Layer Pattern)
+### 1. Three-Layer Auth System
+
+**Layer 1: Global State** (`src/contexts/AuthContext.tsx`)
 
 ```tsx
-// Layer 1: Global auth state via AuthContext (src/contexts/AuthContext.tsx)
 const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+// Auto-verifies token on mount via /api/auth/verify
+// ALWAYS check isLoading before conditional rendering to prevent auth flash
+```
 
-// Layer 2: ProtectedRoute wrapper for auth-required pages (src/components/ProtectedRoute.tsx)
+**Layer 2: Route Protection** (`src/components/ProtectedRoute.tsx`)
+
+```tsx
 <ProtectedRoute requiredRole="admin">
   {" "}
-  // Optional role enforcement
-  <AdminContent />
-</ProtectedRoute>;
-
-// Layer 3: API route JWT verification (src/lib/auth.ts)
-const token = request.headers.get("authorization")?.replace("Bearer ", "");
-const decoded = verifyToken(token); // Returns decoded payload or null
+  // Optional role check
+  <YourComponent />
+</ProtectedRoute>
+// Failed auth → redirects to `/`, insufficient role → redirects to `/dashboard`
 ```
 
-**Key Implementation Details:**
-
-- Auth state checks happen in `useEffect` with `isLoading` guard to prevent flash of wrong content
-- Tokens stored in cookies (NOT localStorage) via `cookieUtils` from `src/lib/cookies.ts`
-- JWT_SECRET defaults to fallback string if `process.env.JWT_SECRET` not set (see `src/lib/auth.ts:4`)
-- Failed auth redirects to `/` (landing page), insufficient permissions redirect to `/dashboard`
-
-### 2. CSV Data Management Pattern (File-Based Persistence)
+**Layer 3: API Verification** (in API routes)
 
 ```tsx
-// All data operations through src/lib/data.ts
+const token = request.headers.get("authorization")?.replace("Bearer ", "");
+const decoded = verifyToken(token); // null if invalid/expired
+if (!decoded) return NextResponse.json({ success: false, message: "인증 필요" }, { status: 401 });
+```
+
+**Critical Auth Rules:**
+
+- Tokens stored in **cookies** (NOT localStorage) via `cookieUtils` (`src/lib/cookies.ts`)
+- Keys: `hobeom-portal-token`, `hobeom-portal-user` (7-day expiry, sameSite: strict)
+- JWT_SECRET fallback: `"your-secret-key-change-in-production"` (line 4 of `src/lib/auth.ts`)
+- Login updates `last_login` timestamp in users.csv automatically
+
+### 2. CSV Data Layer (File-Based Persistence)
+
+**All data ops through `src/lib/data.ts`:**
+
+```tsx
 import { readCSV, writeCSV, getUsers, getUserByUsername } from "@/lib/data";
 
-// Auto-initialization: Missing CSV files copied from *.sample.csv on first read
-// Example: data/users.csv created from data/users.sample.csv automatically
-
-// App configuration in data/apps.csv with schema:
-// id,name,description,icon,href,require_auth,category,order,is_active
-// category: "public" | "dashboard" | "admin"
+// Auto-init: Missing CSVs copied from *.sample.csv on first readCSV() call
+await ensureDataFile("users.csv"); // Creates from users.sample.csv if missing
 ```
 
-**Critical CSV Rules:**
+**CSV Schema Examples:**
 
-- CSV files must have headers matching TypeScript interfaces in `src/types/index.ts`
-- Writing CSV uses manual serialization (NOT external library) - see `writeCSV()` in `src/lib/data.ts`
-- Data directory is at project root (`/data/`), NOT in `src/`
-- Sample files (`.sample.csv`) serve as schema templates and initial seed data
+```
+data/apps.csv: id,name,description,icon,href,require_auth,category,order,is_active
+data/users.csv: id,username,email,name,role,created_at,last_login,password_hash
+```
 
-### 3. API Route Standardization (Mandatory Response Format)
+**Critical Rules:**
+
+- Headers MUST match TypeScript interfaces in `src/types/index.ts`
+- `writeCSV()` uses manual serialization (escapes commas with quotes)
+- Data dir: `/data/` at project root, NOT `src/data/`
+- `.sample.csv` files = schema templates + seed data (tracked in git)
+- Actual `.csv` files ignored by git (created at runtime)
+
+**Batch Operations Pattern** (avoid CSV race conditions):
 
 ```tsx
-// ALL API routes return ApiResponse interface (src/types/index.ts)
+// WRONG: N separate writes = data corruption risk
+for (item of items) await addTripItem(item); // ❌
+
+// RIGHT: Single atomic write
+await addTripItemsBatch(tripListId, items); // ✅
+// See: addTripItemsBatch, deleteTripItemsBatch, updateTripItemsBagBatch in data.ts
+```
+
+### 3. API Response Standard (Mandatory Format)
+
+**ALL API routes MUST return:**
+
+```tsx
 interface ApiResponse {
   success: boolean;
-  message: string; // ALWAYS in Korean
+  message: string; // ALWAYS Korean
   data?: any;
 }
 
-// Example implementation pattern:
+// Template:
 export async function POST(request: NextRequest) {
   try {
-    // ... logic ...
+    const token = request.headers.get("authorization")?.replace("Bearer ", "");
+    const decoded = verifyToken(token || "");
+    if (!decoded) return NextResponse.json({ success: false, message: "인증 필요" }, { status: 401 });
+
+    // ... business logic ...
     return NextResponse.json({ success: true, message: "성공", data });
   } catch (error) {
     return NextResponse.json({ success: false, message: "오류 발생" }, { status: 500 });
@@ -81,13 +113,13 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Active API Endpoints:**
+**Key API Endpoints:**
 
-- `POST /api/auth/login` - JWT token generation, updates `last_login` in CSV
-- `POST /api/auth/verify` - Token validation
-- `GET /api/apps?category={public|dashboard|admin}` - App list by category
-- `GET /api/users` - User management (admin only)
-- `PUT /api/users/[id]` - Update user data
+- `POST /api/auth/login` - Returns `{success, message, user, token}`
+- `POST /api/auth/verify` - Validates JWT
+- `GET /api/apps?category=public|dashboard|admin` - App list
+- `GET /api/users` - Admin only
+- `POST /api/travel-prep/trip-items/batch` - Batch add items (see CSV batch pattern)
 
 ## Development Workflows
 
@@ -99,118 +131,98 @@ npm run build   # Production build with Turbopack (also uses --turbopack)
 npm run lint    # ESLint with flat config (eslint.config.mjs)
 ```
 
-### Data Initialization Workflow
+### Data Initialization
 
 ```bash
-# Run initialization script to copy sample CSV files
-bash scripts/init-dev.sh  # Creates data/*.csv from *.sample.csv files
-
-# Or let auto-initialization happen on first API call
-# (see ensureDataFile() in src/lib/data.ts)
+bash scripts/init-dev.sh  # Copies *.sample.csv → *.csv files
+# OR auto-init happens on first readCSV() call (ensureDataFile in data.ts)
 ```
 
-### Adding New Apps (5-Step Process)
+### Adding New Apps (5 Steps)
 
-1. Add entry to `data/apps.csv` with unique ID and proper category
-2. Create route file at `src/app/{samples|dashboard}/[app-name]/page.tsx`
-3. For dashboard apps: wrap page content with `<ProtectedRoute>`
-4. Update `src/lib/data.ts` if custom data operations needed
-5. Test with appropriate user role (public/user/admin)
+1. Add to `data/apps.csv`: `id,name,description,icon,href,require_auth,category,order,is_active`
+2. Create route: `src/app/{samples|dashboard}/[app-name]/page.tsx`
+3. Dashboard apps: wrap with `<ProtectedRoute requiredRole="admin">` if admin-only
+4. Add data functions to `src/lib/data.ts` if needed
+5. Test with test accounts: `admin/password`, `user1/password`
 
 ## App Categories & Storage Patterns
 
-### Public Apps (`/samples/*` routes)
+### Public Apps (`/samples/*`)
 
-- **No authentication required**
-- Client-side only with localStorage persistence
-- Example: `src/app/samples/notepad/page.tsx` uses `localStorage.getItem("notepad-notes")`
-- Must be marked `require_auth: false, category: public` in CSV
+- No auth required, localStorage-based
+- Example: notepad uses `localStorage.getItem("hobeom-portal-notepad-notes")`
+- CSV: `require_auth: false, category: public`
 
-### Dashboard Apps (`/dashboard/*` routes)
+### Dashboard Apps (`/dashboard/*`)
 
-- **Require authentication** - wrapped with `<ProtectedRoute>`
-- Can use API routes for server-side data (CSV or future DB)
-- Example: `src/app/dashboard/users/page.tsx` fetches from `/api/users`
-- Must be marked `require_auth: true, category: dashboard` in CSV
+- Auth required, wrap with `<ProtectedRoute>`
+- Server-side CSV data via API routes
+- Example: travel-prep fetches from `/api/travel-prep/*`
+- CSV: `require_auth: true, category: dashboard`
 
-### Admin Tools
+### Admin Apps
 
-- **Require `role: "admin"`** - wrapped with `<ProtectedRoute requiredRole="admin">`
-- Extra layer of role validation at API level
-- Example: User management in `/dashboard/users` checks role in API route
-- Must be marked `category: admin` in CSV
+- Admin role required: `<ProtectedRoute requiredRole="admin">`
+- Double-check role in API routes too
+- Example: `/dashboard/users` checks `decoded.role === "admin"` in API
+- CSV: `category: admin`
 
-## Component & Styling Conventions
+## Component Patterns
 
-### UI Component Pattern (src/components/ui/)
+### UI Components (`src/components/ui/`)
 
 ```tsx
-// Consistent prop interfaces with className overrides for Tailwind
 interface CardProps {
   children: React.ReactNode;
-  className?: string;
-  padding?: "sm" | "md" | "lg"; // Standardized size variants
+  className?: string; // Tailwind override
+  padding?: "sm" | "md" | "lg";
 }
-// Usage: <Card padding="lg" className="bg-blue-50">
 ```
 
-### Layout Structure (Critical Pattern)
+### Layout Structure
 
 ```tsx
-// Root layout wraps entire app with AuthProvider (src/app/layout.tsx)
-<html lang="ko">
-  <body>
-    <AuthProvider>{children}</AuthProvider>
-  </body>
-</html>
+// Root wraps with AuthProvider (src/app/layout.tsx)
+<AuthProvider>{children}</AuthProvider>
 
-// Dashboard pages should include DashboardHeader component
-<DashboardHeader /> // Shows user info, logout button
+// Dashboard pages include header
+<DashboardHeader />  // User info + logout
 ```
 
-### Loading & Error States
+### Loading States
 
 ```tsx
-// Standard loading pattern with isLoading state
-{
-  isLoading && <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />;
-}
-
-// Protected routes show Korean loading message during auth check
-// See ProtectedRoute.tsx for reference implementation
+// Check isLoading before rendering to prevent auth flash
+if (isLoading) return <LoadingSpinner />;
+if (!isAuthenticated) return null; // Let redirect happen
 ```
 
-## Data Flow & Integration Points
+## Data Flows
 
-### App Discovery Flow (4-Step Pattern)
+### App Discovery (4 Steps)
 
-1. `data/apps.csv` defines all available apps with metadata
-2. Root page (`src/app/page.tsx`) or dashboard fetches via `/api/apps?category=X`
-3. `AppIconGrid` component (`src/components/AppIconGrid.tsx`) renders grid
-4. Click navigates to `href` from CSV, Next.js App Router handles routing
+1. `data/apps.csv` defines apps
+2. Page fetches via `/api/apps?category=X`
+3. `AppIconGrid` renders
+4. Click → navigate to `href`
 
-### Session Management (Cookie-Based)
+### Session (Cookie-Based)
 
 ```tsx
-// All cookie operations through cookieUtils (src/lib/cookies.ts)
 import { cookieUtils } from "@/lib/cookies";
-
-// Storage keys: "hobeom-portal-token" and "hobeom-portal-user"
-cookieUtils.setToken(token); // 7-day expiry, sameSite: "strict"
-cookieUtils.getToken(); // Returns string | undefined
-cookieUtils.clearAll(); // Logout cleanup
-
-// AuthContext automatically verifies token on mount via /api/auth/verify
+cookieUtils.setToken(token); // 7d expiry
+cookieUtils.getToken();
+cookieUtils.clearAll(); // Logout
+// AuthContext auto-verifies on mount
 ```
 
-## Korean Localization Requirements
+## Korean Localization
 
-- **All user-facing text MUST be in Korean**: UI labels, error messages, API responses
-- **Date formatting**: Use Korean locale for date displays
-- **Test accounts** (all with password "password"):
-  - `admin` - Admin role, full access
-  - `user1` - User role, dashboard access
-  - `demo` - User role, demo account
+- All UI text, messages, errors in Korean
+- Test accounts (password: `password`):
+  - `admin` - Full access
+  - `user1`, `demo` - Dashboard only
 
 ## File Structure & Naming Conventions
 
@@ -249,10 +261,10 @@ JWT_SECRET=your-secret-key-change-in-production  # Used in src/lib/auth.ts
 NODE_ENV=production  # Affects cookie secure flag in src/lib/cookies.ts
 ```
 
-## Common Pitfalls & Solutions
+## Common Pitfalls
 
-1. **Turbopack flag missing**: Build fails → Always use `--turbopack` (check package.json scripts)
-2. **CSV file not found**: First run → Use `scripts/init-dev.sh` OR let auto-init create from sample
-3. **Auth redirect loop**: Check `isLoading` state before redirecting in useEffect
-4. **Korean text missing**: All messages must be in Korean per project conventions
-5. **API response format**: Always return `{ success, message, data }` structure
+1. **Missing `--turbopack`**: Check package.json scripts
+2. **CSV not found**: Run `scripts/init-dev.sh` or let auto-init create it
+3. **Auth redirect loop**: Always check `isLoading` before redirecting
+4. **Wrong API format**: Must return `{success, message, data}`
+5. **Batch ops**: Use `addTripItemsBatch` not loop of single writes
