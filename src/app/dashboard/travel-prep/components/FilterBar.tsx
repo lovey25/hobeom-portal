@@ -4,11 +4,10 @@ import { TripItemFilter } from "@/types";
 interface FilterBarProps {
   filter: TripItemFilter;
   onFilterChange: (newFilter: TripItemFilter) => void;
-  bags: Array<{ id: string; name: string }>;
   categories: string[];
 }
 
-export function FilterBar({ filter, onFilterChange, bags, categories }: FilterBarProps) {
+export function FilterBar({ filter, onFilterChange, categories }: FilterBarProps) {
   return (
     <div className="bg-white p-4 rounded-lg border border-gray-200">
       <div className="flex items-center justify-between mb-3">

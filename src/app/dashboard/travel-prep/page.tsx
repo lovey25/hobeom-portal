@@ -10,7 +10,7 @@ import { ItemCard } from "./components/ItemCard";
 import { ItemFormModal } from "./components/ItemFormModal";
 import { FilterBar } from "./components/FilterBar";
 import { cookieUtils } from "@/lib/cookies";
-import { TripList, TripItem, TravelItem, Bag, BagStats, TripItemFilter } from "@/types";
+import { TripList, TripItem, TravelItem, BagStats, TripItemFilter } from "@/types";
 
 export default function TravelPrepPage() {
   const router = useRouter();
@@ -20,7 +20,6 @@ export default function TravelPrepPage() {
   const [currentTrip, setCurrentTrip] = useState<TripList | null>(null);
   const [tripItems, setTripItems] = useState<TripItem[]>([]);
   const [allTravelItems, setAllTravelItems] = useState<TravelItem[]>([]);
-  const [allBags, setAllBags] = useState<Bag[]>([]);
   const [bagStats, setBagStats] = useState<BagStats[]>([]);
   const [filter, setFilter] = useState<TripItemFilter>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +88,7 @@ export default function TravelPrepPage() {
       const tripsData = await tripsRes.json();
 
       if (itemsData.success) setAllTravelItems(itemsData.data);
-      if (bagsData.success) setAllBags(bagsData.data);
+      // bagsData는 bagStats에서 사용되므로 별도 저장 불필요
 
       // 마지막 사용 여행이 있으면 로드
       if (tripsData.success && tripsData.data.length > 0) {
@@ -185,30 +184,6 @@ export default function TravelPrepPage() {
       }
     } catch (error) {
       console.error("준비 상태 업데이트 실패:", error);
-    }
-  };
-
-  // 아이템 가방 변경
-  const changeItemBag = async (itemId: string, newBagId: string) => {
-    try {
-      const token = cookieUtils.getToken();
-      const res = await fetch("/api/travel-prep/trip-items", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          itemId,
-          bagId: newBagId,
-        }),
-      });
-
-      if (res.ok) {
-        await loadTripData();
-      }
-    } catch (error) {
-      console.error("가방 변경 실패:", error);
     }
   };
 
@@ -523,12 +498,7 @@ export default function TravelPrepPage() {
 
           {/* 필터 바 */}
           <div id="filter-section">
-            <FilterBar
-              filter={filter}
-              onFilterChange={setFilter}
-              bags={bagStats.map((s) => ({ id: s.bagId, name: s.bag.name }))}
-              categories={categories}
-            />
+            <FilterBar filter={filter} onFilterChange={setFilter} categories={categories} />
           </div>
 
           {/* 가방 섹션 */}
@@ -572,7 +542,7 @@ export default function TravelPrepPage() {
                   <p>가방을 추가해주세요</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {bagStats.map((stats) => (
                     <BagCard
                       key={stats.bagId}
