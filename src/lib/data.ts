@@ -910,17 +910,21 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
           return {
             ...travelItem,
             isPrepared: tripItem.isPrepared,
+            quantity: tripItem.quantity, // 수량 정보 추가
           };
         })
-        .filter((item): item is TravelItem & { isPrepared: boolean } => item !== null);
+        .filter((item): item is TravelItem & { isPrepared: boolean; quantity: number } => item !== null);
 
-      // 무게 계산
-      const itemsWeight = itemsWithDetails.reduce((sum, item) => sum + item.weight, 0);
+      // 무게 계산 (수량 반영)
+      const itemsWeight = itemsWithDetails.reduce((sum, item) => sum + item.weight * item.quantity, 0);
       const totalWeight = bag.weight + itemsWeight;
 
-      // 부피 계산
+      // 부피 계산 (수량 반영)
       const bagVolume = bag.width * bag.height * bag.depth;
-      const usedVolume = itemsWithDetails.reduce((sum, item) => sum + item.width * item.height * item.depth, 0);
+      const usedVolume = itemsWithDetails.reduce(
+        (sum, item) => sum + item.width * item.height * item.depth * item.quantity,
+        0
+      );
       const saturation = Math.min((usedVolume / bagVolume) * volumeRatio * 100, 100);
 
       stats.push({
