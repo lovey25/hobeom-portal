@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    if (!bagId) {
+    if (bagId === undefined || bagId === null) {
       const response: ApiResponse = {
         success: false,
         message: "가방 ID가 필요합니다.",

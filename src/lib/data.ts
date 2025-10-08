@@ -818,11 +818,26 @@ export async function updateTripItem(
 export async function deleteTripItem(itemId: string): Promise<void> {
   try {
     const rawItems = await readCSV<any>("trip-items.csv");
-    const filteredItems = rawItems.filter((item) => item.id !== itemId);
+    const itemToDelete = rawItems.find((item) => item.id === itemId);
 
-    if (rawItems.length === filteredItems.length) {
+    if (!itemToDelete) {
       throw new Error("아이템을 찾을 수 없습니다.");
     }
+
+    // 가방 삭제인 경우, 해당 가방에 배정된 아이템들의 bagId를 제거
+    let updatedItems = rawItems;
+    if (itemToDelete.itemType === "bag") {
+      const bagId = itemToDelete.itemId;
+      updatedItems = rawItems.map((item) => {
+        if (item.itemType === "item" && item.bagId === bagId) {
+          return { ...item, bagId: "" };
+        }
+        return item;
+      });
+    }
+
+    // 해당 아이템 삭제
+    const filteredItems = updatedItems.filter((item) => item.id !== itemId);
 
     await writeCSV("trip-items.csv", filteredItems);
   } catch (error) {

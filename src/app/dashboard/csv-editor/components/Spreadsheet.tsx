@@ -25,6 +25,7 @@ export function Spreadsheet({
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // 컬럼 폭 상태 (각 컬럼의 최소 폭으로 초기화)
   const [columnWidths, setColumnWidths] = useState<number[]>(
@@ -34,6 +35,9 @@ export function Spreadsheet({
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
 
+  // 정렬 상태: { columnIndex: 'asc' | 'desc' | null }
+  const [sortState, setSortState] = useState<{ col: number; direction: "asc" | "desc" } | null>(null);
+
   // 편집 모드 진입 시 input에 포커스
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -42,11 +46,17 @@ export function Spreadsheet({
     }
   }, [editingCell]);
 
+  // 단일 클릭: 셀 선택
   const handleCellClick = (row: number, col: number) => {
     setSelectedCell({ row, col });
-    const value = data[row][headers[col]] || "";
+    setEditingCell(null); // 편집 모드 해제
+  };
+
+  // 더블 클릭: 편집 모드 진입
+  const handleCellDoubleClick = (row: number, col: number) => {
+    setSelectedCell({ row, col });
     setEditingCell({ row, col });
-    setEditValue(value);
+    setEditValue(data[row][headers[col]] || "");
   };
 
   const handleCellChange = (value: string) => {
@@ -62,18 +72,32 @@ export function Spreadsheet({
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  // 편집 모드에서 키보드 이벤트
+  const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleCellBlur();
 
-      // 다음 행으로 이동
-      if (selectedCell && selectedCell.row < data.length - 1) {
-        const nextRow = selectedCell.row + 1;
-        const nextCol = selectedCell.col;
-        setSelectedCell({ row: nextRow, col: nextCol });
-        setEditingCell({ row: nextRow, col: nextCol });
-        setEditValue(data[nextRow][headers[nextCol]] || "");
+      if (selectedCell) {
+        if (e.shiftKey) {
+          // Shift+Enter: 위로 이동
+          if (selectedCell.row > 0) {
+            const nextRow = selectedCell.row - 1;
+            const nextCol = selectedCell.col;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          }
+        } else {
+          // Enter: 아래로 이동
+          if (selectedCell.row < data.length - 1) {
+            const nextRow = selectedCell.row + 1;
+            const nextCol = selectedCell.col;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          }
+        }
       }
     } else if (e.key === "Escape") {
       setEditingCell(null);
@@ -82,17 +106,67 @@ export function Spreadsheet({
       e.preventDefault();
       handleCellBlur();
 
-      // 다음 열로 이동
       if (selectedCell) {
-        const nextCol = selectedCell.col < headers.length - 1 ? selectedCell.col + 1 : 0;
-        const nextRow = nextCol === 0 && selectedCell.row < data.length - 1 ? selectedCell.row + 1 : selectedCell.row;
-
-        if (nextRow < data.length) {
-          setSelectedCell({ row: nextRow, col: nextCol });
-          setEditingCell({ row: nextRow, col: nextCol });
-          setEditValue(data[nextRow][headers[nextCol]] || "");
+        if (e.shiftKey) {
+          // Shift+Tab: 왼쪽으로 이동
+          if (selectedCell.col > 0) {
+            const nextCol = selectedCell.col - 1;
+            const nextRow = selectedCell.row;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          } else if (selectedCell.row > 0) {
+            // 첫 열이면 이전 행의 마지막 열로
+            const nextCol = headers.length - 1;
+            const nextRow = selectedCell.row - 1;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          }
+        } else {
+          // Tab: 오른쪽으로 이동
+          if (selectedCell.col < headers.length - 1) {
+            const nextCol = selectedCell.col + 1;
+            const nextRow = selectedCell.row;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          } else if (selectedCell.row < data.length - 1) {
+            // 마지막 열이면 다음 행의 첫 열로
+            const nextCol = 0;
+            const nextRow = selectedCell.row + 1;
+            setSelectedCell({ row: nextRow, col: nextCol });
+            setEditingCell({ row: nextRow, col: nextCol });
+            setEditValue(data[nextRow][headers[nextCol]] || "");
+          }
         }
       }
+    }
+  };
+
+  // 선택 모드에서 키보드 이벤트
+  const handleTableKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!selectedCell || editingCell) return;
+
+    const { row, col } = selectedCell;
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // 편집 모드로 진입
+      setEditingCell({ row, col });
+      setEditValue(data[row][headers[col]] || "");
+    } else if (e.key === "ArrowUp" && row > 0) {
+      e.preventDefault();
+      setSelectedCell({ row: row - 1, col });
+    } else if (e.key === "ArrowDown" && row < data.length - 1) {
+      e.preventDefault();
+      setSelectedCell({ row: row + 1, col });
+    } else if (e.key === "ArrowLeft" && col > 0) {
+      e.preventDefault();
+      setSelectedCell({ row, col: col - 1 });
+    } else if (e.key === "ArrowRight" && col < headers.length - 1) {
+      e.preventDefault();
+      setSelectedCell({ row, col: col + 1 });
     }
   };
 
@@ -115,6 +189,38 @@ export function Spreadsheet({
 
   const handleSave = () => {
     onSave(headers, data);
+  };
+
+  // 컬럼 정렬 기능
+  const handleSort = (colIndex: number) => {
+    const header = headers[colIndex];
+    let newDirection: "asc" | "desc" = "asc";
+
+    // 같은 컬럼 클릭 시 방향 전환
+    if (sortState?.col === colIndex) {
+      newDirection = sortState.direction === "asc" ? "desc" : "asc";
+    }
+
+    const sortedData = [...data].sort((a, b) => {
+      const aVal = String(a[header] || "");
+      const bVal = String(b[header] || "");
+
+      // 숫자인지 확인
+      const aNum = parseFloat(aVal);
+      const bNum = parseFloat(bVal);
+      const isNumeric = !isNaN(aNum) && !isNaN(bNum);
+
+      if (isNumeric) {
+        return newDirection === "asc" ? aNum - bNum : bNum - aNum;
+      } else {
+        return newDirection === "asc" ? aVal.localeCompare(bVal, "ko") : bVal.localeCompare(aVal, "ko");
+      }
+    });
+
+    setData(sortedData);
+    setSortState({ col: colIndex, direction: newDirection });
+    setSelectedCell(null);
+    setEditingCell(null);
   };
 
   // 컬럼 리사이즈 시작
@@ -187,7 +293,12 @@ export function Spreadsheet({
         </div>
       </div>
 
-      <Card className="overflow-auto max-h-[calc(100vh-250px)]">
+      <div
+        className="overflow-auto max-h-[calc(100vh-250px)] border border-gray-200 rounded-lg bg-white"
+        ref={tableRef}
+        tabIndex={0}
+        onKeyDown={handleTableKeyDown}
+      >
         <table className="border-collapse text-sm" style={{ tableLayout: "fixed" }}>
           <thead className="bg-gray-100 sticky top-0">
             <tr>
@@ -197,15 +308,21 @@ export function Spreadsheet({
               {headers.map((header, colIndex) => (
                 <th
                   key={colIndex}
-                  className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-900 relative"
+                  className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-900 relative cursor-pointer hover:bg-gray-200 transition-colors"
                   style={{ width: `${columnWidths[colIndex]}px` }}
+                  onClick={() => handleSort(colIndex)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="truncate">{header}</span>
+                    {/* 정렬 표시 */}
+                    {sortState?.col === colIndex && (
+                      <span className="text-blue-600 font-bold">{sortState.direction === "asc" ? "↑" : "↓"}</span>
+                    )}
                     {/* 리사이즈 핸들 */}
                     <div
-                      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 hover:w-1.5 transition-all"
+                      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 hover:w-1.5 transition-all z-10"
                       onMouseDown={(e) => handleResizeStart(e, colIndex)}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
                 </th>
@@ -233,6 +350,7 @@ export function Spreadsheet({
                       }`}
                       style={{ width: `${columnWidths[colIndex]}px` }}
                       onClick={() => handleCellClick(rowIndex, colIndex)}
+                      onDoubleClick={() => handleCellDoubleClick(rowIndex, colIndex)}
                     >
                       {isEditing ? (
                         <input
@@ -241,7 +359,7 @@ export function Spreadsheet({
                           value={editValue}
                           onChange={(e) => handleCellChange(e.target.value)}
                           onBlur={handleCellBlur}
-                          onKeyDown={handleKeyDown}
+                          onKeyDown={handleEditKeyDown}
                           className="w-full px-1 py-0.5 border border-blue-500 rounded focus:outline-none text-gray-900"
                         />
                       ) : (
@@ -254,10 +372,13 @@ export function Spreadsheet({
             ))}
           </tbody>
         </table>
-      </Card>
+      </div>
 
       <div className="text-sm text-gray-700">
-        <p>💡 팁: 셀 클릭으로 편집 | Enter로 아래 행 | Tab으로 다음 열 | ESC로 취소 | 컬럼 경계를 드래그하여 폭 조절</p>
+        <p>
+          💡 팁: 클릭=선택 | 더블클릭=편집 | 방향키=이동 | Enter=편집시작 | Tab/Enter로 셀이동 | Shift+Tab/Enter로
+          역방향 | 헤더 클릭=정렬
+        </p>
         <p className="font-medium">
           현재 행: {data.length}개 | 헤더: {headers.join(", ")}
         </p>

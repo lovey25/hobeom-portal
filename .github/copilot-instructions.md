@@ -167,8 +167,135 @@ bash scripts/init-dev.sh  # Copies *.sample.csv → *.csv files
 - Double-check role in API routes too
 - Example: `/dashboard/users` checks `decoded.role === "admin"` in API
 - CSV: `category: admin`
+- **CSV Editor App**: Excel-like spreadsheet for editing data files directly
 
 ## Component Patterns
+
+### Accordion/Grouping Pattern (New in v0.3.0)
+
+**Used in:** travel-prep items, travel-prep main screen
+
+```tsx
+// State: groupBy mode + collapsed groups tracking
+const [groupBy, setGroupBy] = useState<"none" | "category" | "importance">("none");
+const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+// Initialize all groups as collapsed when groupBy changes
+useEffect(() => {
+  if (groupBy !== "none") {
+    const timer = setTimeout(() => {
+      const allGroupKeys = Object.keys(groupedItems);
+      if (allGroupKeys.length > 0) {
+        setCollapsedGroups(new Set(allGroupKeys));
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }
+}, [groupBy]);
+
+// Toggle individual group
+const toggleGroup = (groupName: string) => {
+  const newCollapsed = new Set(collapsedGroups);
+  if (newCollapsed.has(groupName)) {
+    newCollapsed.delete(groupName);
+  } else {
+    newCollapsed.add(groupName);
+  }
+  setCollapsedGroups(newCollapsed);
+};
+
+// Group items by key
+const groupedItems: { [key: string]: ItemType[] } = {};
+if (groupBy === "category") {
+  items.forEach((item) => {
+    const key = item.category || "기타";
+    if (!groupedItems[key]) groupedItems[key] = [];
+    groupedItems[key].push(item);
+  });
+}
+
+// Render accordion
+{
+  Object.keys(groupedItems).map((groupName) => (
+    <div key={groupName}>
+      <button onClick={() => toggleGroup(groupName)}>
+        <span className={`transform ${collapsedGroups.has(groupName) ? "" : "rotate-90"}`}>▶</span>
+        {groupName}
+      </button>
+      {!collapsedGroups.has(groupName) && (
+        <div>
+          {groupedItems[groupName].map((item) => (
+            <ItemCard {...item} />
+          ))}
+        </div>
+      )}
+    </div>
+  ));
+}
+```
+
+**Key Features:**
+
+- `Set<string>` for O(1) collapse state lookup
+- `setTimeout` in useEffect prevents timing issues with groupedItems calculation
+- Group selection buttons with stopPropagation to prevent toggle
+- Importance sorting order: 매우중요 → 중요 → 보통 → 낮음 → 선택
+
+### Spreadsheet Pattern (CSV Editor)
+
+**Location:** `src/app/dashboard/csv-editor/components/Spreadsheet.tsx`
+
+```tsx
+// Dual-mode interaction: click=select, double-click=edit
+const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
+
+// Column management
+const [columnWidths, setColumnWidths] = useState<number[]>(() => headers.map(() => 100));
+const [sortState, setSortState] = useState<{ col: number; direction: "asc" | "desc" } | null>(null);
+
+// Click: select only
+const handleCellClick = (row: number, col: number) => {
+  setSelectedCell({ row, col });
+  setEditingCell(null);
+};
+
+// Double-click: enter edit mode
+const handleCellDoubleClick = (row: number, col: number) => {
+  setSelectedCell({ row, col });
+  setEditingCell({ row, col });
+  setEditValue(data[row][headers[col]] || "");
+};
+
+// Keyboard navigation in edit mode
+const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === "Enter") {
+    // Save and move down (or up if Shift)
+  } else if (e.key === "Tab") {
+    // Save and move right (or left if Shift)
+  } else if (e.key === "Escape") {
+    // Cancel edit
+  }
+};
+
+// Keyboard navigation in select mode (table with tabIndex={0})
+const handleTableKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  if (!selectedCell || editingCell) return;
+  if (e.key === "Enter") {
+    // Enter edit mode
+  } else if (e.key === "ArrowUp/Down/Left/Right") {
+    // Move selection
+  }
+};
+```
+
+**Key Features:**
+
+- Auto-backup on save (`.backup` suffix)
+- Column resizing via drag handles
+- Click header to sort (asc ↔ desc)
+- Numeric vs string sorting detection
+- Tab wraps to next row
 
 ### UI Components (`src/components/ui/`)
 

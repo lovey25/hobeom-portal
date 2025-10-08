@@ -18,10 +18,11 @@ function ItemsSelectionContent() {
   const [items, setItems] = useState<TravelItem[]>([]);
   const [existingItemIds, setExistingItemIds] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [hideExistingItems, setHideExistingItems] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterImportance, setFilterImportance] = useState<number | "all">("all");
+  const [groupBy, setGroupBy] = useState<"none" | "category" | "importance">("none");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TravelItem | null>(null);
 
@@ -187,14 +188,78 @@ function ItemsSelectionContent() {
   };
 
   // 필터링된 아이템
+  // 필터링된 아이템 (이미 추가됨 숨김만 적용)
   const filteredItems = items.filter((item) => {
-    if (filterCategory !== "all" && item.category !== filterCategory) return false;
-    if (filterImportance !== "all" && item.importance !== filterImportance) return false;
+    if (hideExistingItems && existingItemIds.has(item.id)) return false;
     return true;
   });
 
-  // 카테고리 목록
-  const categories = Array.from(new Set(items.map((item) => item.category)));
+  // 그룹별로 아이템 정리
+  const groupedItems: { [key: string]: TravelItem[] } = {};
+
+  if (groupBy === "category") {
+    filteredItems.forEach((item) => {
+      const key = item.category || "기타";
+      if (!groupedItems[key]) groupedItems[key] = [];
+      groupedItems[key].push(item);
+    });
+  } else if (groupBy === "importance") {
+    filteredItems.forEach((item) => {
+      const importanceLabels: { [key: number]: string } = {
+        5: "매우중요",
+        4: "중요",
+        3: "보통",
+        2: "낮음",
+        1: "선택",
+      };
+      const key = importanceLabels[item.importance] || "기타";
+      if (!groupedItems[key]) groupedItems[key] = [];
+      groupedItems[key].push(item);
+    });
+  }
+
+  // groupBy 변경 시 모든 그룹을 접힌 상태로 초기화
+  useEffect(() => {
+    if (groupBy !== "none") {
+      // 다음 렌더링에서 groupedItems가 계산된 후 실행
+      const timer = setTimeout(() => {
+        const allGroupKeys = Object.keys(groupedItems);
+        if (allGroupKeys.length > 0) {
+          setCollapsedGroups(new Set(allGroupKeys));
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [groupBy]);
+
+  // 그룹 토글
+  const toggleGroup = (groupName: string) => {
+    const newCollapsed = new Set(collapsedGroups);
+    if (newCollapsed.has(groupName)) {
+      newCollapsed.delete(groupName);
+    } else {
+      newCollapsed.add(groupName);
+    }
+    setCollapsedGroups(newCollapsed);
+  };
+
+  // 그룹 전체 선택/해제
+  const toggleGroupSelection = (groupName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // 그룹 접기/펴기 방지
+    const groupItems = groupedItems[groupName] || [];
+    const selectableItems = groupItems.filter((item) => !existingItemIds.has(item.id));
+    const allSelected = selectableItems.every((item) => selectedItems.has(item.id));
+
+    const newSelection = new Set(selectedItems);
+    if (allSelected) {
+      // 모두 선택되어 있으면 해제
+      selectableItems.forEach((item) => newSelection.delete(item.id));
+    } else {
+      // 하나라도 선택 안되어 있으면 모두 선택
+      selectableItems.forEach((item) => newSelection.add(item.id));
+    }
+    setSelectedItems(newSelection);
+  };
 
   if (isLoading) {
     return (
@@ -239,10 +304,10 @@ function ItemsSelectionContent() {
             </div>
           </div>
 
-          {/* 필터 */}
+          {/* 정렬 및 선택 컨트롤 */}
           <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">필터 및 선택</h2>
+              <h2 className="text-sm font-semibold text-gray-900">정렬 및 선택</h2>
               <div className="flex gap-2">
                 <button
                   onClick={handleSelectAll}
@@ -256,90 +321,224 @@ function ItemsSelectionContent() {
                 >
                   선택 해제
                 </button>
+                {/* 이미 추가된 아이템 숨기기 버튼 */}
+                {existingItemIds.size > 0 && (
+                  <button
+                    onClick={() => setHideExistingItems(!hideExistingItems)}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors font-medium ${
+                      hideExistingItems
+                        ? "bg-purple-600 text-white hover:bg-purple-700"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {hideExistingItems ? "✓ 추가됨 숨김" : "추가됨 숨기기"}
+                  </button>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 분류 필터 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">분류</label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+            {/* 그룹화 버튼 */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setGroupBy("none")}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                    groupBy === "none" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
                 >
-                  <option value="all">전체</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+                  기본 정렬
+                </button>
+                <button
+                  onClick={() => setGroupBy("category")}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                    groupBy === "category" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  분류별 그룹
+                </button>
+                <button
+                  onClick={() => setGroupBy("importance")}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                    groupBy === "importance" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  중요도별 그룹
+                </button>
               </div>
 
-              {/* 중요도 필터 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">중요도</label>
-                <select
-                  value={filterImportance}
-                  onChange={(e) => setFilterImportance(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">전체</option>
-                  <option value="5">매우중요 (5)</option>
-                  <option value="4">중요 (4)</option>
-                  <option value="3">보통 (3)</option>
-                  <option value="2">낮음 (2)</option>
-                  <option value="1">선택 (1)</option>
-                </select>
-              </div>
+              {/* 전체 접기/펴기 버튼 */}
+              {groupBy !== "none" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCollapsedGroups(new Set())}
+                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  >
+                    전체 펴기
+                  </button>
+                  <button
+                    onClick={() => setCollapsedGroups(new Set(Object.keys(groupedItems)))}
+                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  >
+                    전체 접기
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* 아이템 리스트 */}
           <div className="space-y-3 mb-40">
-            {filteredItems.map((item) => {
-              const isAlreadyAdded = existingItemIds.has(item.id);
-              return (
-                <div key={item.id} className="relative group">
-                  {isAlreadyAdded && (
-                    <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded">
-                      이미 추가됨
+            {groupBy === "none"
+              ? // 기본 정렬 - 리스트 형태
+                filteredItems.map((item) => {
+                  const isAlreadyAdded = existingItemIds.has(item.id);
+                  return (
+                    <div key={item.id} className="relative group">
+                      {isAlreadyAdded && (
+                        <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded">
+                          이미 추가됨
+                        </div>
+                      )}
+                      <div className={isAlreadyAdded ? "opacity-50" : ""}>
+                        <ItemCard
+                          item={item}
+                          isSelectable={!isAlreadyAdded}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={() => !isAlreadyAdded && toggleItemSelection(item.id)}
+                          showWeightInGrams={true}
+                        />
+                      </div>
+                      {/* 편집/삭제 버튼 */}
+                      <div className="absolute bottom-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingItem(item);
+                            setIsModalOpen(true);
+                          }}
+                          className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                        >
+                          편집
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteItem(item.id);
+                          }}
+                          className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div className={isAlreadyAdded ? "opacity-50" : ""}>
-                    <ItemCard
-                      item={item}
-                      isSelectable={!isAlreadyAdded}
-                      isSelected={selectedItems.has(item.id)}
-                      onSelect={() => !isAlreadyAdded && toggleItemSelection(item.id)}
-                      showWeightInGrams={true}
-                    />
-                  </div>
-                  {/* 편집/삭제 버튼 - 모든 아이템에 표시 */}
-                  <div className="absolute bottom-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingItem(item);
-                        setIsModalOpen(true);
-                      }}
-                      className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-                    >
-                      편집
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteItem(item.id);
-                      }}
-                      className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })
+              : // 그룹별 정렬 - 아코디언 형태
+                Object.keys(groupedItems)
+                  .sort((a, b) => {
+                    // 중요도별 그룹일 경우 중요도 순서대로 정렬
+                    if (groupBy === "importance") {
+                      const importanceOrder: { [key: string]: number } = {
+                        매우중요: 1,
+                        중요: 2,
+                        보통: 3,
+                        낮음: 4,
+                        선택: 5,
+                        기타: 6,
+                      };
+                      return (importanceOrder[a] || 999) - (importanceOrder[b] || 999);
+                    }
+                    // 그 외에는 알파벳순
+                    return a.localeCompare(b);
+                  })
+                  .map((groupName) => {
+                    const groupItems = groupedItems[groupName];
+                    const isCollapsed = collapsedGroups.has(groupName);
+                    const groupSelectedCount = groupItems.filter((item) => selectedItems.has(item.id)).length;
+
+                    return (
+                      <div key={groupName} className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-3">
+                        {/* 그룹 헤더 */}
+                        <div className="bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <div className="w-full px-4 py-3 flex items-center justify-between">
+                            <button onClick={() => toggleGroup(groupName)} className="flex items-center gap-3 flex-1">
+                              <span className={`transform transition-transform ${isCollapsed ? "" : "rotate-90"}`}>
+                                ▶
+                              </span>
+                              <h3 className="font-semibold text-gray-900">{groupName}</h3>
+                              <span className="text-sm text-gray-500">
+                                ({groupItems.length}개)
+                                {groupSelectedCount > 0 && (
+                                  <span className="ml-2 text-blue-600 font-medium">{groupSelectedCount}개 선택</span>
+                                )}
+                              </span>
+                            </button>
+
+                            {/* 그룹 전체 선택 버튼 */}
+                            <button
+                              onClick={(e) => toggleGroupSelection(groupName, e)}
+                              className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-medium ml-2"
+                            >
+                              {groupItems
+                                .filter((item) => !existingItemIds.has(item.id))
+                                .every((item) => selectedItems.has(item.id))
+                                ? "선택 해제"
+                                : "전체 선택"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 그룹 아이템들 */}
+                        {!isCollapsed && (
+                          <div className="p-3 space-y-2">
+                            {groupItems.map((item) => {
+                              const isAlreadyAdded = existingItemIds.has(item.id);
+                              return (
+                                <div key={item.id} className="relative group">
+                                  {isAlreadyAdded && (
+                                    <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded">
+                                      이미 추가됨
+                                    </div>
+                                  )}
+                                  <div className={isAlreadyAdded ? "opacity-50" : ""}>
+                                    <ItemCard
+                                      item={item}
+                                      isSelectable={!isAlreadyAdded}
+                                      isSelected={selectedItems.has(item.id)}
+                                      onSelect={() => !isAlreadyAdded && toggleItemSelection(item.id)}
+                                      showWeightInGrams={true}
+                                    />
+                                  </div>
+                                  {/* 편집/삭제 버튼 */}
+                                  <div className="absolute bottom-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingItem(item);
+                                        setIsModalOpen(true);
+                                      }}
+                                      className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                                    >
+                                      편집
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteItem(item.id);
+                                      }}
+                                      className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
           </div>
         </div>
 
@@ -394,7 +593,7 @@ function ItemsSelectionContent() {
           }}
           onSave={handleSaveItem}
           item={editingItem}
-          categories={categories}
+          categories={Array.from(new Set(items.map((item) => item.category)))}
         />
       </div>
     </ProtectedRoute>

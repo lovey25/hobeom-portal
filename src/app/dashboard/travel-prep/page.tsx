@@ -8,7 +8,6 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { BagCard } from "./components/BagCard";
 import { ItemCard } from "./components/ItemCard";
 import { ItemFormModal } from "./components/ItemFormModal";
-import { FilterBar } from "./components/FilterBar";
 import { cookieUtils } from "@/lib/cookies";
 import { TripList, TripItem, TravelItem, BagStats, TripItemFilter } from "@/types";
 
@@ -29,6 +28,8 @@ export default function TravelPrepPage() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [showQuickNav, setShowQuickNav] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [groupBy, setGroupBy] = useState<"none" | "category" | "importance">("none");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -146,8 +147,13 @@ export default function TravelPrepPage() {
 
       // 가방 필터
       if (filter.bagId !== undefined) {
-        if (filter.bagId === "unassigned" && tripItem.bagId) return false;
-        if (filter.bagId !== "unassigned" && tripItem.bagId !== filter.bagId) return false;
+        // 미배정 필터: bagId가 빈 문자열일 때
+        if (filter.bagId === "") {
+          if (tripItem.bagId && tripItem.bagId !== "") return false;
+        } else {
+          // 특정 가방 필터
+          if (tripItem.bagId !== filter.bagId) return false;
+        }
       }
 
       // 중요도 필터
@@ -371,7 +377,7 @@ export default function TravelPrepPage() {
   // 가방 삭제
   const deleteBag = async (bagId: string, bagName: string) => {
     // 해당 가방에 아이템이 있는지 확인
-    const itemsInBag = tripItems.filter((item) => item.bagId === bagId);
+    const itemsInBag = tripItems.filter((item) => item.itemType === "item" && item.bagId === bagId);
 
     if (itemsInBag.length > 0) {
       if (
@@ -389,7 +395,17 @@ export default function TravelPrepPage() {
 
     try {
       const token = cookieUtils.getToken();
-      const res = await fetch(`/api/travel-prep/bags?id=${bagId}`, {
+
+      // 여행 리스트에서 가방 아이템 찾기
+      const bagTripItem = tripItems.find((item) => item.itemType === "bag" && item.itemId === bagId);
+
+      if (!bagTripItem) {
+        alert("가방을 찾을 수 없습니다.");
+        return;
+      }
+
+      // 여행 리스트에서 가방 아이템 삭제
+      const res = await fetch(`/api/travel-prep/trip-items?itemId=${bagTripItem.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -412,6 +428,73 @@ export default function TravelPrepPage() {
 
   const filteredItems = getFilteredItems();
   const categories = Array.from(new Set(allTravelItems.map((item) => item.category)));
+
+  // 그룹별로 아이템 정리
+  const groupedItems: { [key: string]: typeof filteredItems } = {};
+
+  if (groupBy === "category") {
+    filteredItems.forEach((tripItem) => {
+      const travelItem = allTravelItems.find((ti) => ti.id === tripItem.itemId);
+      if (!travelItem) return;
+      const key = travelItem.category || "기타";
+      if (!groupedItems[key]) groupedItems[key] = [];
+      groupedItems[key].push(tripItem);
+    });
+  } else if (groupBy === "importance") {
+    filteredItems.forEach((tripItem) => {
+      const travelItem = allTravelItems.find((ti) => ti.id === tripItem.itemId);
+      if (!travelItem) return;
+      const importanceLabels: { [key: number]: string } = {
+        5: "매우중요",
+        4: "중요",
+        3: "보통",
+        2: "낮음",
+        1: "선택",
+      };
+      const key = importanceLabels[travelItem.importance] || "기타";
+      if (!groupedItems[key]) groupedItems[key] = [];
+      groupedItems[key].push(tripItem);
+    });
+  }
+
+  // groupBy 변경 시 모든 그룹을 접힌 상태로 초기화
+  useEffect(() => {
+    if (groupBy !== "none") {
+      const timer = setTimeout(() => {
+        const allGroupKeys = Object.keys(groupedItems);
+        if (allGroupKeys.length > 0) {
+          setCollapsedGroups(new Set(allGroupKeys));
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [groupBy]);
+
+  // 그룹 토글
+  const toggleGroup = (groupName: string) => {
+    const newCollapsed = new Set(collapsedGroups);
+    if (newCollapsed.has(groupName)) {
+      newCollapsed.delete(groupName);
+    } else {
+      newCollapsed.add(groupName);
+    }
+    setCollapsedGroups(newCollapsed);
+  };
+
+  // 그룹 전체 선택/해제
+  const toggleGroupSelection = (groupName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const groupItems = groupedItems[groupName] || [];
+    const allSelected = groupItems.every((item) => selectedItemIds.has(item.id));
+
+    const newSelection = new Set(selectedItemIds);
+    if (allSelected) {
+      groupItems.forEach((item) => newSelection.delete(item.id));
+    } else {
+      groupItems.forEach((item) => newSelection.add(item.id));
+    }
+    setSelectedItemIds(newSelection);
+  };
 
   if (isLoading) {
     return (
@@ -496,9 +579,93 @@ export default function TravelPrepPage() {
             </div>
           </div>
 
-          {/* 필터 바 */}
+          {/* 정렬 및 필터 */}
           <div id="filter-section">
-            <FilterBar filter={filter} onFilterChange={setFilter} categories={categories} />
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setGroupBy("none")}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                      groupBy === "none" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    기본 정렬
+                  </button>
+                  <button
+                    onClick={() => setGroupBy("category")}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                      groupBy === "category" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    분류별 그룹
+                  </button>
+                  <button
+                    onClick={() => setGroupBy("importance")}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                      groupBy === "importance"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    중요도별 그룹
+                  </button>
+                </div>
+
+                {/* 전체 접기/펴기 버튼 */}
+                {groupBy !== "none" && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCollapsedGroups(new Set())}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                    >
+                      전체 펴기
+                    </button>
+                    <button
+                      onClick={() => setCollapsedGroups(new Set(Object.keys(groupedItems)))}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                    >
+                      전체 접기
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 준비상태 필터 */}
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-sm text-gray-700 font-medium">준비상태:</span>
+                <button
+                  onClick={() => setFilter({ ...filter, isPrepared: undefined })}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    filter.isPrepared === undefined
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setFilter({ ...filter, isPrepared: false })}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    filter.isPrepared === false
+                      ? "bg-yellow-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  준비중
+                </button>
+                <button
+                  onClick={() => setFilter({ ...filter, isPrepared: true })}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    filter.isPrepared === true
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  ✓ 준비완료
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* 가방 섹션 */}
@@ -537,13 +704,73 @@ export default function TravelPrepPage() {
                 </div>
               </div>
 
-              {bagStats.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>가방을 추가해주세요</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {bagStats.map((stats) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* 미배정 카드 (항상 첫 번째) */}
+                <BagCard
+                  key="unassigned"
+                  stats={{
+                    bagId: "",
+                    bag: {
+                      id: "",
+                      name: "미배정",
+                      width: 0,
+                      height: 0,
+                      depth: 0,
+                      weight: 0,
+                      isActive: true,
+                    },
+                    items: tripItems
+                      .filter((item) => item.itemType === "item" && !item.bagId)
+                      .map((item) => {
+                        const travelItem = allTravelItems.find((ti) => ti.id === item.itemId);
+                        return {
+                          ...travelItem!,
+                          isPrepared: item.isPrepared,
+                        };
+                      })
+                      .filter((item) => item.id),
+                    totalWeight: tripItems
+                      .filter((item) => item.itemType === "item" && !item.bagId)
+                      .reduce((sum, item) => {
+                        const travelItem = allTravelItems.find((ti) => ti.id === item.itemId);
+                        return sum + (travelItem?.weight || 0) * item.quantity;
+                      }, 0),
+                    totalVolume: tripItems
+                      .filter((item) => item.itemType === "item" && !item.bagId)
+                      .reduce((sum, item) => {
+                        const travelItem = allTravelItems.find((ti) => ti.id === item.itemId);
+                        const volume = travelItem
+                          ? (travelItem.width * travelItem.height * travelItem.depth) / 1000
+                          : 0;
+                        return sum + volume * item.quantity;
+                      }, 0),
+                    saturation: 0,
+                  }}
+                  isSelected={selectedBagId === ""}
+                  onClick={() => {
+                    if (selectedItemIds.size > 0) {
+                      // 선택된 아이템이 있으면 미배정으로 이동
+                      if (confirm(`선택된 ${selectedItemIds.size}개 아이템을 미배정 상태로 이동하시겠습니까?`)) {
+                        changeSelectedItemsBag("");
+                      }
+                    } else {
+                      // 선택된 아이템이 없으면 필터링
+                      setSelectedBagId(selectedBagId === "" ? null : "");
+                      setFilter({
+                        ...filter,
+                        bagId: selectedBagId === "" ? undefined : "",
+                      });
+                    }
+                  }}
+                />
+
+                {/* 일반 가방들 */}
+                {bagStats.length === 0 ? (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    <p>가방을 추가해주세요</p>
+                  </div>
+                ) : (
+                  bagStats.map((stats) => (
                     <BagCard
                       key={stats.bagId}
                       stats={stats}
@@ -569,9 +796,9 @@ export default function TravelPrepPage() {
                       }}
                       showDetails={true}
                     />
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
@@ -579,52 +806,7 @@ export default function TravelPrepPage() {
           <div id="items-section" className="mt-6">
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold text-gray-900">준비물 ({filteredItems.length}개)</h2>
-
-                  {/* 미배정 필터 버튼 */}
-                  <button
-                    onClick={() => {
-                      if (filter.bagId === "unassigned") {
-                        // 미배정 필터 해제
-                        setFilter({ ...filter, bagId: undefined });
-                      } else {
-                        // 미배정 필터 활성화
-                        setFilter({ ...filter, bagId: "unassigned" });
-                      }
-                    }}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      filter.bagId === "unassigned"
-                        ? "bg-orange-600 text-white hover:bg-orange-700"
-                        : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
-                    }`}
-                  >
-                    {filter.bagId === "unassigned" ? "✓ 미배정" : "미배정"}
-                  </button>
-
-                  {/* 준비상태 순환 버튼 */}
-                  <button
-                    onClick={() => {
-                      // 전체 → 준비중 → 준비완료 → 전체 순환
-                      if (filter.isPrepared === undefined) {
-                        setFilter({ ...filter, isPrepared: false }); // 준비중
-                      } else if (filter.isPrepared === false) {
-                        setFilter({ ...filter, isPrepared: true }); // 준비완료
-                      } else {
-                        setFilter({ ...filter, isPrepared: undefined }); // 전체
-                      }
-                    }}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      filter.isPrepared === undefined
-                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
-                        : filter.isPrepared === false
-                        ? "bg-yellow-600 text-white hover:bg-yellow-700"
-                        : "bg-green-600 text-white hover:bg-green-700"
-                    }`}
-                  >
-                    {filter.isPrepared === undefined ? "전체" : filter.isPrepared === false ? "준비중" : "✓ 준비완료"}
-                  </button>
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900">준비물 ({filteredItems.length}개)</h2>
                 <div className="flex gap-2">
                   {selectedItemIds.size > 0 ? (
                     <>
@@ -659,7 +841,8 @@ export default function TravelPrepPage() {
                   <p className="text-lg mb-2">준비물이 없습니다</p>
                   <p className="text-sm">아래 버튼을 클릭하여 준비물을 추가해주세요</p>
                 </div>
-              ) : (
+              ) : groupBy === "none" ? (
+                // 기본 정렬 - 그리드 형태
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredItems.map((tripItem) => {
                     const travelItem = allTravelItems.find((ti) => ti.id === tripItem.itemId);
@@ -684,6 +867,89 @@ export default function TravelPrepPage() {
                       />
                     );
                   })}
+                </div>
+              ) : (
+                // 그룹별 정렬 - 아코디언 형태
+                <div className="space-y-3">
+                  {Object.keys(groupedItems)
+                    .sort((a, b) => {
+                      if (groupBy === "importance") {
+                        const importanceOrder: { [key: string]: number } = {
+                          매우중요: 1,
+                          중요: 2,
+                          보통: 3,
+                          낮음: 4,
+                          선택: 5,
+                          기타: 6,
+                        };
+                        return (importanceOrder[a] || 999) - (importanceOrder[b] || 999);
+                      }
+                      return a.localeCompare(b);
+                    })
+                    .map((groupName) => {
+                      const groupItems = groupedItems[groupName];
+                      const isCollapsed = collapsedGroups.has(groupName);
+                      const groupSelectedCount = groupItems.filter((item) => selectedItemIds.has(item.id)).length;
+
+                      return (
+                        <div key={groupName} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                          {/* 그룹 헤더 */}
+                          <div className="bg-gray-100 hover:bg-gray-200 transition-colors">
+                            <div className="w-full px-4 py-3 flex items-center justify-between">
+                              <button onClick={() => toggleGroup(groupName)} className="flex items-center gap-3 flex-1">
+                                <span className={`transform transition-transform ${isCollapsed ? "" : "rotate-90"}`}>
+                                  ▶
+                                </span>
+                                <h3 className="font-semibold text-gray-900">{groupName}</h3>
+                                <span className="text-sm text-gray-500">
+                                  ({groupItems.length}개)
+                                  {groupSelectedCount > 0 && (
+                                    <span className="ml-2 text-blue-600 font-medium">{groupSelectedCount}개 선택</span>
+                                  )}
+                                </span>
+                              </button>
+
+                              {/* 그룹 전체 선택 버튼 */}
+                              <button
+                                onClick={(e) => toggleGroupSelection(groupName, e)}
+                                className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-medium ml-2"
+                              >
+                                {groupItems.every((item) => selectedItemIds.has(item.id)) ? "선택 해제" : "전체 선택"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 그룹 아이템들 */}
+                          {!isCollapsed && (
+                            <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {groupItems.map((tripItem) => {
+                                const travelItem = allTravelItems.find((ti) => ti.id === tripItem.itemId);
+                                if (!travelItem) return null;
+
+                                const bag = bagStats.find((s) => s.bagId === tripItem.bagId);
+                                const isSelected = selectedItemIds.has(tripItem.id);
+
+                                return (
+                                  <ItemCard
+                                    key={tripItem.id}
+                                    item={travelItem}
+                                    isPrepared={tripItem.isPrepared}
+                                    quantity={tripItem.quantity}
+                                    bagName={bag?.bag.name || "미배정"}
+                                    onTogglePrepared={() => toggleItemPrepared(tripItem.id, tripItem.isPrepared)}
+                                    onChangeBag={() => toggleItemSelection(tripItem.id)}
+                                    onQuantityChange={(newQuantity) => changeItemQuantity(tripItem.id, newQuantity)}
+                                    onEdit={() => openEditItemModal(travelItem)}
+                                    onRemove={() => removeItem(tripItem.id)}
+                                    isSelected={isSelected}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>

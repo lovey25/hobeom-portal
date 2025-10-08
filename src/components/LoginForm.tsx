@@ -59,6 +59,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <Input
             label="사용자명"
             type="text"
+            name="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="사용자명을 입력하세요"
@@ -69,6 +70,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <Input
             label="비밀번호"
             type="password"
+            name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호를 입력하세요"

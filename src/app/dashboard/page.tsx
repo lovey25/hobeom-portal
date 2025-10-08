@@ -11,6 +11,7 @@ import { cookieUtils } from "@/lib/cookies";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [publicApps, setPublicApps] = useState<AppIcon[]>([]);
   const [dashboardApps, setDashboardApps] = useState<AppIcon[]>([]);
   const [adminApps, setAdminApps] = useState<AppIcon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +23,16 @@ export default function DashboardPage() {
   const loadApps = async () => {
     try {
       const token = cookieUtils.getToken();
+
+      // 퍼블릭 앱 로드 (모든 사용자에게 표시)
+      const publicRes = await fetch("/api/apps?category=public", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const publicData = await publicRes.json();
+
+      if (publicData.success) {
+        setPublicApps(publicData.data);
+      }
 
       // 대시보드 앱 로드
       const dashboardRes = await fetch("/api/apps?category=dashboard", {
@@ -102,9 +113,13 @@ export default function DashboardPage() {
 
           {/* Dashboard Apps */}
           <div className="space-y-8">
-            <AppIconGrid apps={dashboardApps} title="🛠️ 개인 도구" columns={4} />
+            {publicApps.length > 0 && <AppIconGrid apps={publicApps} title="🌐 공용 도구" columns={4} />}
 
-            {user?.role === "admin" && <AppIconGrid apps={adminApps} title="👑 관리자 도구" columns={4} />}
+            {dashboardApps.length > 0 && <AppIconGrid apps={dashboardApps} title="🛠️ 개인 도구" columns={4} />}
+
+            {user?.role === "admin" && adminApps.length > 0 && (
+              <AppIconGrid apps={adminApps} title="👑 관리자 도구" columns={4} />
+            )}
           </div>
 
           {/* Recent Activity */}
