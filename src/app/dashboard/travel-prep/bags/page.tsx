@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
 import { BagFormModal } from "../components/BagFormModal";
 import { cookieUtils } from "@/lib/cookies";
 import { Bag } from "@/types";
@@ -13,6 +13,7 @@ function BagsSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
 
   const [bags, setBags] = useState<Bag[]>([]);
   const [existingBagIds, setExistingBagIds] = useState<Set<string>>(new Set());
@@ -23,6 +24,10 @@ function BagsSelectionContent() {
   const [editingBag, setEditingBag] = useState<Bag | null>(null);
 
   const tripId = searchParams.get("tripId");
+
+  useEffect(() => {
+    setPageTitle("가방 선택", "여행에 사용할 가방을 선택하세요");
+  }, [setPageTitle]);
 
   useEffect(() => {
     loadBags();
@@ -184,7 +189,6 @@ function BagsSelectionContent() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gray-50">
-          <DashboardHeader />
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -201,14 +205,11 @@ function BagsSelectionContent() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* 헤더 */}
+          {/* 가방 선택 상태 */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">가방 선택</h1>
                 <p className="text-gray-600 mt-2">여행에 사용할 가방을 선택해주세요 (선택: {selectedBags.size}개)</p>
               </div>
               <div className="flex gap-2">
@@ -350,7 +351,6 @@ export default function BagsSelectionPage() {
       fallback={
         <ProtectedRoute>
           <div className="min-h-screen bg-gray-50">
-            <DashboardHeader />
             <div className="max-w-7xl mx-auto px-4 py-8">
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">

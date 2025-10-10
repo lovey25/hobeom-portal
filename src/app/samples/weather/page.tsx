@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 interface WeatherData {
   location: string;
@@ -15,9 +16,14 @@ interface WeatherData {
 }
 
 export default function WeatherPage() {
+  const { setPageTitle } = usePageTitle();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState("서울");
+
+  useEffect(() => {
+    setPageTitle("날씨", "주요 도시의 날씨 정보를 확인하세요");
+  }, [setPageTitle]);
 
   // 실제로는 API를 사용하지만, 여기서는 샘플 데이터를 생성
   const generateSampleWeather = (location: string): WeatherData => {
@@ -64,17 +70,6 @@ export default function WeatherPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">🌤️ 날씨</h1>
-            <Link href="/" className="text-blue-600 hover:text-blue-800">
-              ← 홈으로
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* City Selector */}

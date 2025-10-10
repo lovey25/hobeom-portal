@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,12 +23,17 @@ interface CSVData {
 
 export default function CSVEditorPage() {
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
   const [files, setFiles] = useState<CSVFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [csvData, setCsvData] = useState<CSVData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setPageTitle("CSV 편집기", "데이터 파일을 직접 편집할 수 있습니다");
+  }, [setPageTitle]);
 
   // CSV 파일 목록 로드
   const loadFiles = async () => {
@@ -149,15 +154,7 @@ export default function CSVEditorPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
         <main className="mx-auto px-6 py-8 max-w-[1800px]">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">CSV 편집기</h1>
-            <p className="text-gray-700 mt-2 font-medium">
-              data 폴더의 CSV 파일을 직접 편집할 수 있습니다. (관리자 전용)
-            </p>
-          </div>
-
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 font-medium">
               ⚠️ {error}

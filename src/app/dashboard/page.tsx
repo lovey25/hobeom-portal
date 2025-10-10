@@ -2,19 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
 import { AppIconGrid } from "@/components/AppIconGrid";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AppIcon } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
   const [publicApps, setPublicApps] = useState<AppIcon[]>([]);
   const [dashboardApps, setDashboardApps] = useState<AppIcon[]>([]);
   const [adminApps, setAdminApps] = useState<AppIcon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 페이지 제목 설정
+  useEffect(() => {
+    setPageTitle("대시보드", "다양한 도구와 기능을 이용하실 수 있습니다");
+  }, [setPageTitle]);
 
   useEffect(() => {
     loadApps();
@@ -64,7 +70,6 @@ export default function DashboardPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gray-50">
-          <DashboardHeader />
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -81,13 +86,13 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Welcome Section */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">환영합니다, {user?.name}님! 👋</h1>
-            <p className="text-gray-600">대시보드에서 다양한 도구와 기능을 이용하실 수 있습니다.</p>
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
+              <h2 className="text-2xl font-bold mb-2">환영합니다, {user?.name}님! 👋</h2>
+              <p className="text-blue-100">오늘도 좋은 하루 되세요!</p>
+            </div>
           </div>
 
           {/* Stats Cards */}

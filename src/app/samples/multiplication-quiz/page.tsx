@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { PortalHeader } from "@/components/PortalHeader";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 interface Question {
   a: number;
@@ -28,6 +28,7 @@ declare global {
 }
 
 export default function MultiplicationQuizPage() {
+  const { setPageTitle } = usePageTitle();
   const [gameState, setGameState] = useState<GameState>("setup");
   const [questionCount, setQuestionCount] = useState<string>("10");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -48,6 +49,10 @@ export default function MultiplicationQuizPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentStateRef = useRef({ currentQuestionIndex: 0, questions: [] as Question[], showFeedback: false });
   const submitAnswerRef = useRef<((answer: string) => void) | null>(null);
+
+  useEffect(() => {
+    setPageTitle("구구단 퀴즈", "음성으로 답하는 구구단 게임");
+  }, [setPageTitle]);
 
   // 한국어 숫자를 아라비아 숫자로 변환하는 함수
   const convertKoreanToNumber = (text: string): number | null => {
@@ -712,11 +717,8 @@ export default function MultiplicationQuizPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <PortalHeader />
       <div className="p-4">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">🔢 곱셈구구 퀴즈</h1>
-
           {/* 설정 화면 */}
           {gameState === "setup" && (
             <Card className="p-8 text-center">

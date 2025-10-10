@@ -3,19 +3,24 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
 import { cookieUtils } from "@/lib/cookies";
 import { TravelTypeTemplate, TripList } from "@/types";
 
 export default function SelectTripPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
 
   const [travelTypes, setTravelTypes] = useState<TravelTypeTemplate[]>([]);
   const [existingTrips, setExistingTrips] = useState<TripList[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setPageTitle("여행 선택", "새로운 여행을 만들거나 기존 여행을 선택하세요");
+  }, [setPageTitle]);
 
   // 새 여행 폼 상태
   const [formData, setFormData] = useState({
@@ -111,7 +116,6 @@ export default function SelectTripPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gray-50">
-          <DashboardHeader />
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -128,15 +132,7 @@ export default function SelectTripPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* 헤더 */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">여행 선택</h1>
-            <p className="text-gray-600 mt-2">기존 여행을 선택하거나 새로운 여행을 만들어보세요</p>
-          </div>
-
           {/* 기존 여행 목록 */}
           {existingTrips.length > 0 && (
             <div className="mb-8">

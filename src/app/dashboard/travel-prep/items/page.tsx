@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
 import { ItemCard } from "../components/ItemCard";
 import { ItemFormModal, ItemFormData } from "../components/ItemFormModal";
 import { cookieUtils } from "@/lib/cookies";
@@ -14,6 +14,7 @@ function ItemsSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
 
   const [items, setItems] = useState<TravelItem[]>([]);
   const [existingItemIds, setExistingItemIds] = useState<Set<string>>(new Set());
@@ -27,6 +28,10 @@ function ItemsSelectionContent() {
   const [editingItem, setEditingItem] = useState<TravelItem | null>(null);
 
   const tripId = searchParams.get("tripId");
+
+  useEffect(() => {
+    setPageTitle("물품 선택", "여행에 필요한 물품을 선택하세요");
+  }, [setPageTitle]);
 
   useEffect(() => {
     loadItems();
@@ -265,7 +270,6 @@ function ItemsSelectionContent() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gray-50">
-          <DashboardHeader />
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -282,13 +286,10 @@ function ItemsSelectionContent() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         <div className="max-w-4xl mx-auto px-4 py-8 pb-32">
-          {/* 헤더 */}
+          {/* 준비물 선택 상태 */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">준비물 선택</h1>
               <p className="text-gray-600 mt-2">여행에 필요한 준비물을 선택해주세요 (선택: {selectedItems.size}개)</p>
             </div>
             <div className="flex gap-2">
@@ -606,7 +607,6 @@ export default function ItemsSelectionPage() {
       fallback={
         <ProtectedRoute>
           <div className="min-h-screen bg-gray-50">
-            <DashboardHeader />
             <div className="max-w-7xl mx-auto px-4 py-8">
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">

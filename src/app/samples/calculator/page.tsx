@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 export default function CalculatorPage() {
+  const { setPageTitle } = usePageTitle();
+
+  useEffect(() => {
+    setPageTitle("계산기", "간단한 계산을 수행할 수 있습니다");
+  }, [setPageTitle]);
   const [display, setDisplay] = useState("0");
   const [previousValue, setPreviousValue] = useState<number | null>(null);
   const [operation, setOperation] = useState<string | null>(null);
@@ -75,17 +81,6 @@ export default function CalculatorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">🧮 계산기</h1>
-            <Link href="/" className="text-blue-600 hover:text-blue-800">
-              ← 홈으로
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-md mx-auto px-4 py-8">
         <Card>
           <div className="space-y-4">

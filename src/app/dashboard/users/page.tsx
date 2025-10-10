@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { User } from "@/types";
 
 export default function UsersPage() {
+  const { setPageTitle } = usePageTitle();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setPageTitle("사용자 관리", "시스템 사용자를 관리합니다");
+  }, [setPageTitle]);
 
   useEffect(() => {
     fetchUsers();
@@ -127,14 +132,7 @@ export default function UsersPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">사용자 관리</h1>
-            <p className="mt-2 text-gray-600">시스템 사용자와 권한을 관리합니다.</p>
-          </div>
-
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>

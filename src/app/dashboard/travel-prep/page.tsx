@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { DashboardHeader } from "@/components/DashboardHeader";
 import { BagCard } from "./components/BagCard";
 import { ItemCard } from "./components/ItemCard";
 import { ItemFormModal } from "./components/ItemFormModal";
@@ -14,6 +14,11 @@ import { TripList, TripItem, TravelItem, BagStats, TripItemFilter } from "@/type
 export default function TravelPrepPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { setPageTitle } = usePageTitle();
+
+  useEffect(() => {
+    setPageTitle("여행 준비", "여행 짐을 체계적으로 관리하세요");
+  }, [setPageTitle]);
 
   // 상태 관리
   const [currentTrip, setCurrentTrip] = useState<TripList | null>(null);
@@ -500,7 +505,6 @@ export default function TravelPrepPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gray-50">
-          <DashboardHeader />
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -521,8 +525,6 @@ export default function TravelPrepPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-
         {/* 퀵 네비게이션 - 스크롤 시 동적 표시 */}
         <div
           className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md transition-all duration-300 ${

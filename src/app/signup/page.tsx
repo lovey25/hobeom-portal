@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 export default function SignupPage() {
+  const { setPageTitle } = usePageTitle();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -19,6 +21,11 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+
+  // 페이지 제목 설정
+  useEffect(() => {
+    setPageTitle("회원가입", "새 계정을 만들어 모든 기능을 이용하세요");
+  }, [setPageTitle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,16 +94,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">호범 포털 회원가입</h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            로그인하기
-          </Link>
-        </p>
-      </div>
-
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card padding="lg">
           <form onSubmit={handleSubmit} className="space-y-6">
