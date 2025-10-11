@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AppIconGrid } from "@/components/AppIconGrid";
@@ -11,6 +12,7 @@ import Link from "next/link";
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { setPageTitle } = usePageTitle();
+  const router = useRouter();
   const [publicApps, setPublicApps] = useState<AppIcon[]>([]);
   const [dashboardApps, setDashboardApps] = useState<AppIcon[]>([]);
 
@@ -18,6 +20,13 @@ export default function Home() {
   useEffect(() => {
     setPageTitle("호범 포털");
   }, [setPageTitle]);
+
+  // 로그인 상태면 대시보드로 리다이렉트
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
     loadApps();

@@ -31,6 +31,7 @@ export default function MultiplicationQuizPage() {
   const { setPageTitle } = usePageTitle();
   const [gameState, setGameState] = useState<GameState>("setup");
   const [questionCount, setQuestionCount] = useState<string>("10");
+  const [timeLimit, setTimeLimit] = useState<number>(3); // 제한시간 (초), 0은 무제한
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState<string>("");
@@ -42,16 +43,18 @@ export default function MultiplicationQuizPage() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingSpeechRef = useRef<boolean>(false); // 음성 인식 처리 중 플래그
+  const isListeningRef = useRef<boolean>(false); // 음성 인식 리스닝 상태 ref
   const currentStateRef = useRef({ currentQuestionIndex: 0, questions: [] as Question[], showFeedback: false });
   const submitAnswerRef = useRef<((answer: string) => void) | null>(null);
 
   useEffect(() => {
-    setPageTitle("구구단 퀴즈", "음성으로 답하는 구구단 게임");
+    setPageTitle("곱셈구구", "음성으로 답하는 구구단 게임");
   }, [setPageTitle]);
 
   // 한국어 숫자를 아라비아 숫자로 변환하는 함수
@@ -207,18 +210,24 @@ export default function MultiplicationQuizPage() {
 
   // 타이머 시작
   const startTimer = () => {
+    // 제한시간이 0(무제한)이면 타이머를 시작하지 않음
+    if (timeLimit === 0) {
+      setTimerActive(false);
+      return;
+    }
+
     // 기존 타이머가 있다면 정리
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    setTimeLeft(5);
+    setTimeLeft(timeLimit);
     setTimerActive(true);
 
     // 로컬 변수 사용으로 state 업데이트 지연 문제 해결
     // setInterval 콜백에서 state를 참조하면 closure로 인해 초기값만 참조되는 문제 발생
-    let currentTime = 5;
+    let currentTime = timeLimit;
     timerRef.current = setInterval(() => {
       currentTime -= 1;
       setTimeLeft(currentTime);
@@ -229,7 +238,13 @@ export default function MultiplicationQuizPage() {
           timerRef.current = null;
         }
         setTimerActive(false);
-        handleTimeUp();
+
+        // 타이머가 0이 되어도 즉시 타임아웃 처리하지 않고 2초 유예 시간 부여
+        // 이 시간 동안 음성 인식이 완료되면 정답 처리 가능
+        // 사용자 경험: 3초 제한 → 실제로는 5초까지 답변 가능
+        setTimeout(() => {
+          handleTimeUp();
+        }, 2000);
       }
     }, 1000);
   };
@@ -257,7 +272,22 @@ export default function MultiplicationQuizPage() {
       return;
     }
 
+    // 타이머에서 1초 유예를 이미 부여했으므로 여기서는 즉시 처리
+    // 단, 답안이 제출된 경우는 제외
+
     stopTimer();
+
+    // 음성 인식 중단 (ref 사용)
+    if (recognitionRef.current && isListeningRef.current) {
+      try {
+        recognitionRef.current.abort();
+        setIsListening(false);
+        isListeningRef.current = false;
+      } catch (e) {
+        // 중단 실패 무시
+      }
+    }
+
     setUserAnswer("시간 초과");
     setIsCorrect(false);
     setShowFeedback(true);
@@ -375,6 +405,9 @@ export default function MultiplicationQuizPage() {
     recognition.maxAlternatives = 3;
 
     recognition.onresult = (event: any) => {
+      // 음성 인식 처리 시작
+      isProcessingSpeechRef.current = true;
+
       // 여러 대안 중 가장 좋은 결과 찾기
       let bestTranscript = "";
       let bestConfidence = 0;
@@ -392,39 +425,47 @@ export default function MultiplicationQuizPage() {
 
       setUserAnswer(extractedNumber);
       setIsListening(false);
+      isListeningRef.current = false;
       setErrorMessage("");
 
       // 유효한 숫자가 추출된 경우 자동으로 제출
       const numberValue = parseInt(extractedNumber);
       if (!isNaN(numberValue) && numberValue >= 0 && numberValue <= 81) {
-        // 타이머 중지
+        // 타이머 중지 (즉시 중지하여 handleTimeUp 실행 방지)
         if (timerRef.current) {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
         setTimerActive(false);
 
-        // 음성 인식 완료 후 자동 제출 (100ms 후)
-        setTimeout(() => {
-          const currentShowFeedback = currentStateRef.current.showFeedback;
-          if (!currentShowFeedback && submitAnswerRef.current) {
-            submitAnswerRef.current(extractedNumber);
-          }
-        }, 100);
+        // 음성 인식 완료 후 즉시 제출 (대기 시간 제거)
+        const currentShowFeedback = currentStateRef.current.showFeedback;
+        if (!currentShowFeedback && submitAnswerRef.current) {
+          submitAnswerRef.current(extractedNumber);
+        }
       }
+
+      // 음성 인식 처리 완료
+      isProcessingSpeechRef.current = false;
     };
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
+      isListeningRef.current = false;
+      isProcessingSpeechRef.current = false; // 에러 발생 시에도 플래그 해제
       handleSpeechError(event.error);
     };
 
     recognition.onstart = () => {
       setIsListening(true);
+      isListeningRef.current = true;
+      // 플래그는 onresult에서만 설정 (실제 결과를 받았을 때만)
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      isListeningRef.current = false;
+      isProcessingSpeechRef.current = false; // 음성 인식 종료 시 플래그 해제
     };
 
     recognitionRef.current = recognition;
@@ -517,8 +558,8 @@ export default function MultiplicationQuizPage() {
   const generateQuestions = (count: number): Question[] => {
     const questions: Question[] = [];
     for (let i = 0; i < count; i++) {
-      const a = Math.floor(Math.random() * 9) + 1; // 1-9
-      const b = Math.floor(Math.random() * 9) + 1; // 1-9
+      const a = Math.floor(Math.random() * 8) + 2; // 2-9
+      const b = Math.floor(Math.random() * 8) + 2; // 2-9
       questions.push({
         a,
         b,
@@ -571,10 +612,15 @@ export default function MultiplicationQuizPage() {
       return;
     }
 
-    if (isListening) {
+    if (isListeningRef.current) {
       // 현재 듣고 있으면 중단
-      recognitionRef.current.abort();
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {
+        // 무시
+      }
       setIsListening(false);
+      isListeningRef.current = false;
       return;
     }
 
@@ -593,16 +639,19 @@ export default function MultiplicationQuizPage() {
       setTimeout(() => {
         try {
           setIsListening(true);
+          isListeningRef.current = true;
           recognitionRef.current.start();
         } catch (error) {
           console.error("음성 인식 시작 오류:", error);
           setIsListening(false);
+          isListeningRef.current = false;
           setErrorMessage("음성 인식을 시작할 수 없습니다.");
         }
       }, 50);
     } catch (error) {
       console.error("음성 인식 초기화 오류:", error);
       setIsListening(false);
+      isListeningRef.current = false;
     }
   };
 
@@ -664,7 +713,7 @@ export default function MultiplicationQuizPage() {
       } else {
         setGameState("result");
       }
-    }, 2000);
+    }, 1000);
   };
 
   // 답안 제출 wrapper (userAnswer 상태 사용)
@@ -716,265 +765,329 @@ export default function MultiplicationQuizPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <div className="p-4">
-        <div className="max-w-2xl mx-auto">
-          {/* 설정 화면 */}
-          {gameState === "setup" && (
-            <Card className="p-8 text-center">
-              <h2 className="text-2xl font-semibold mb-6">퀴즈 설정</h2>
-              <div className="mb-6">
-                <label className="block text-lg mb-3">몇 문제를 풀까요?</label>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-4xl">
+        {/* 설정 화면 */}
+        {gameState === "setup" && (
+          <Card className="shadow-none">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-center text-gray-800">🔢 퀴즈 설정</h2>
+            {/* 문제 수 설정 */}
+            <div className="mb-8">
+              <label className="block text-xl sm:text-2xl font-semibold mb-4 text-gray-700">📝 몇 문제를 풀까요?</label>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <button
+                  onClick={() => {
+                    const currentCount = parseInt(questionCount) || 10;
+                    const newCount = Math.max(1, currentCount - 1);
+                    setQuestionCount(newCount.toString());
+                  }}
+                  className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-3xl sm:text-4xl flex items-center justify-center shadow-lg"
+                  aria-label="문제 수 감소"
+                >
+                  −
+                </button>
                 <Input
                   type="number"
                   value={questionCount}
                   onChange={(e) => setQuestionCount(e.target.value)}
                   min="1"
                   max="100"
-                  className="text-center text-xl"
-                  placeholder="문제 수를 입력하세요"
+                  className="flex-1 text-center text-2xl sm:text-3xl font-bold py-4 h-auto"
+                  placeholder="10"
                 />
-              </div>
-              <Button onClick={startQuiz} className="text-xl px-8 py-3">
-                퀴즈 시작하기
-              </Button>
-              {!speechSupported && (
-                <p className="mt-4 text-sm text-orange-600">
-                  ⚠️ 음성 인식이 지원되지 않습니다. 키보드로 답을 입력해주세요.
-                </p>
-              )}
-              {speechSupported && !micPermissionGranted && (
-                <p className="mt-4 text-sm text-blue-600">
-                  🎤 음성 인식으로 답을 말해보세요! (마이크 권한이 필요합니다)
-                </p>
-              )}
-              {speechSupported && micPermissionGranted && (
-                <p className="mt-4 text-sm text-green-600">✅ 음성 인식 준비 완료! 바로 시작할 수 있습니다.</p>
-              )}
-            </Card>
-          )}
-
-          {/* 마이크 권한 요청 화면 */}
-          {gameState === "permission" && (
-            <Card className="p-8 text-center">
-              <div className="mb-6">
-                <div className="text-6xl mb-4">🎤</div>
-                <h2 className="text-2xl font-semibold mb-4">마이크 권한 필요</h2>
-                <p className="text-gray-600 mb-6">
-                  음성으로 답을 말하려면 마이크 접근 권한이 필요합니다.
-                  <br />
-                  브라우저에서 마이크 권한을 허용해주세요.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <Button
-                  onClick={requestMicrophonePermission}
-                  className="text-xl px-8 py-3 bg-blue-600 hover:bg-blue-700"
-                >
-                  🎤 마이크 권한 허용하기
-                </Button>
-
-                <Button
+                <button
                   onClick={() => {
-                    setShowTextInput(true);
-                    setGameState("quiz");
+                    const currentCount = parseInt(questionCount) || 10;
+                    const newCount = Math.min(100, currentCount + 1);
+                    setQuestionCount(newCount.toString());
                   }}
-                  className="text-lg px-6 py-2 bg-gray-500 hover:bg-gray-600"
+                  className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-3xl sm:text-4xl flex items-center justify-center shadow-lg"
+                  aria-label="문제 수 증가"
                 >
-                  키보드로 입력하기
-                </Button>
+                  +
+                </button>
+              </div>
+            </div>
+            {/* 제한시간 설정 */}
+            <div className="mb-8">
+              <label className="block text-xl sm:text-2xl font-semibold mb-4 text-gray-700">
+                ⏱️ 정답 입력 제한시간
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                {[
+                  { value: 1, label: "1초" },
+                  { value: 2, label: "2초" },
+                  { value: 3, label: "3초" },
+                  { value: 4, label: "4초" },
+                  { value: 5, label: "5초" },
+                  { value: 0, label: "무제한" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setTimeLimit(option.value)}
+                    className={`py-4 sm:py-5 px-4 rounded-xl text-lg sm:text-xl font-bold ${
+                      timeLimit === option.value
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button
+              onClick={startQuiz}
+              className="w-full text-2xl sm:text-3xl font-bold py-6 sm:py-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-600 hover:to-purple-600 shadow-xl"
+            >
+              🚀 퀴즈 시작하기
+            </Button>
+            {!speechSupported && (
+              <p className="mt-6 text-base sm:text-lg text-orange-600 text-center font-medium">
+                ⚠️ 음성 인식이 지원되지 않습니다. 키보드로 답을 입력해주세요.
+              </p>
+            )}
+            {speechSupported && !micPermissionGranted && (
+              <p className="mt-6 text-base sm:text-lg text-blue-600 text-center font-medium">
+                🎤 음성 인식으로 답을 말해보세요! (마이크 권한이 필요합니다)
+              </p>
+            )}
+            {speechSupported && micPermissionGranted && (
+              <p className="mt-6 text-base sm:text-lg text-green-600 text-center font-medium">
+                ✅ 음성 인식 준비 완료! 바로 시작할 수 있습니다.
+              </p>
+            )}
+          </Card>
+        )}
+
+        {/* 마이크 권한 요청 화면 */}
+        {gameState === "permission" && (
+          <Card className="p-8 sm:p-12 text-center shadow-none">
+            <div className="mb-8">
+              <div className="text-8xl sm:text-9xl mb-6">🎤</div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-800">마이크 권한 필요</h2>
+              <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed">
+                음성으로 답을 말하려면 마이크 접근 권한이 필요합니다.
+                <br />
+                브라우저에서 마이크 권한을 허용해주세요.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                onClick={requestMicrophonePermission}
+                className="w-full text-2xl sm:text-3xl py-6 sm:py-8 font-bold bg-blue-600 hover:bg-blue-700 shadow-xl"
+              >
+                🎤 마이크 권한 허용하기
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setShowTextInput(true);
+                  setGameState("quiz");
+                }}
+                className="w-full text-xl sm:text-2xl py-5 sm:py-6 font-bold bg-gray-500 hover:bg-gray-600 shadow-lg"
+              >
+                ⌨️ 키보드로 입력하기
+              </Button>
+            </div>
+
+            {errorMessage && <p className="mt-6 text-base sm:text-lg text-red-600 font-medium">⚠️ {errorMessage}</p>}
+          </Card>
+        )}
+
+        {/* 퀴즈 화면 */}
+        {gameState === "quiz" && currentQuestion && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* 진행률 및 타이머 */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="flex justify-between text-base sm:text-lg font-semibold text-gray-700 mb-3">
+                <span>
+                  문제 {currentQuestionIndex + 1} / {questions.length}
+                </span>
+                <span className="text-blue-600">정답: {correctAnswers}개</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 sm:h-4 mb-4">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 sm:h-4 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                ></div>
               </div>
 
-              {errorMessage && <p className="mt-4 text-sm text-red-600">⚠️ {errorMessage}</p>}
-            </Card>
-          )}
-
-          {/* 퀴즈 화면 */}
-          {gameState === "quiz" && currentQuestion && (
-            <div className="space-y-6">
-              {/* 진행률 및 타이머 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>
-                    문제 {currentQuestionIndex + 1} / {questions.length}
-                  </span>
-                  <span>정답: {correctAnswers}개</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                  ></div>
-                </div>
-
-                {/* 타이머 */}
-                {timerActive && (
-                  <div className="flex items-center justify-center space-x-2">
-                    <span className="text-sm text-gray-600">남은 시간:</span>
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`text-2xl font-bold ${
-                          timeLeft <= 1 ? "text-red-500" : timeLeft <= 2 ? "text-orange-500" : "text-green-500"
-                        }`}
-                      >
-                        {timeLeft}
-                      </span>
-                      <span className="text-sm text-gray-600">초</span>
-                    </div>
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-1000 ${
-                          timeLeft <= 1 ? "bg-red-500" : timeLeft <= 2 ? "bg-orange-500" : "bg-green-500"
-                        }`}
-                        style={{ width: `${(timeLeft / 3) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 문제 */}
-              <Card className="p-8 text-center">
-                <div className="text-6xl font-bold text-gray-800 mb-8">
-                  {currentQuestion.a} × {currentQuestion.b} = ?
-                </div>
-
-                <div className="space-y-4">
-                  {/* 답변 표시 영역 */}
-                  <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-[60px] flex flex-col items-center justify-center">
-                    {userAnswer ? (
-                      <div className="text-center">
-                        <span className="text-3xl font-bold text-blue-600">{userAnswer}</span>
-                        {!isNaN(parseInt(userAnswer)) && parseInt(userAnswer) >= 0 && parseInt(userAnswer) <= 81 && (
-                          <div className="text-sm text-green-600 mt-1">✅ 유효한 답안</div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">
-                        {isListening ? "🎤 숫자를 말해주세요... (예: 십이, 열둘, 12)" : "답을 기다리는 중..."}
-                      </span>
-                    )}
-                  </div>
-
-                  {errorMessage && <p className="text-sm text-red-600">⚠️ {errorMessage}</p>}
-
-                  {/* 주요 버튼들 */}
-                  <div className="flex flex-col gap-3">
-                    {speechSupported && micPermissionGranted && !showTextInput && (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={startListening}
-                          disabled={isListening}
-                          className={`text-xl py-4 w-full ${
-                            isListening ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
-                          }`}
-                        >
-                          {isListening ? "🎤 듣는 중... (클릭해서 중단)" : "🎤 음성으로 답하기"}
-                        </Button>
-                        {!isListening && (
-                          <p className="text-xs text-gray-500 text-center">
-                            한국어 숫자(일, 이, 삼...) 또는 아라비아 숫자로 말해주세요
-                            <br />
-                            예시: "십이", "열둘", "12", "스물넷", "24"
-                          </p>
-                        )}
-                        {isListening && (
-                          <p className="text-xs text-blue-600 text-center animate-pulse">
-                            🎤 듣고 있습니다... 숫자를 말해주세요
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={submitAnswer}
-                      disabled={!userAnswer.trim() || isListening}
-                      className="text-xl py-4"
+              {/* 타이머 */}
+              {timerActive && (
+                <div className="flex items-center justify-center space-x-3 sm:space-x-4">
+                  <span className="text-base sm:text-lg font-medium text-gray-600">⏱️ 남은 시간:</span>
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`text-4xl sm:text-5xl font-bold ${
+                        timeLeft <= 3
+                          ? "text-red-500 animate-pulse"
+                          : timeLeft <= 5
+                          ? "text-orange-500"
+                          : "text-green-500"
+                      }`}
                     >
-                      답안 제출
-                    </Button>
+                      {timeLeft}
+                    </span>
+                    <span className="text-lg sm:text-xl text-gray-600">초</span>
                   </div>
+                </div>
+              )}
+              {!timerActive && timeLimit === 0 && (
+                <div className="text-center text-gray-500 font-medium">⏱️ 제한시간 없음</div>
+              )}
+            </div>
 
-                  {/* 텍스트 입력 옵션 */}
-                  {showTextInput ? (
-                    <div className="pt-4 border-t border-gray-200">
-                      <Input
-                        type="text"
-                        value={userAnswer}
-                        onChange={(e) => setUserAnswer(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="text-center text-2xl"
-                        placeholder="키보드로 답을 입력하세요"
-                        disabled={isListening}
-                      />
+            {/* 문제 */}
+            <Card className="p-6 sm:p-10 text-center shadow-none">
+              <div className="text-7xl sm:text-8xl md:text-9xl font-bold text-gray-800 mb-8 sm:mb-12">
+                {currentQuestion.a} × {currentQuestion.b} = ?
+              </div>
+
+              <div className="space-y-4 sm:space-y-6">
+                {/* 답변 표시 영역 */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-4 border-dashed border-gray-300 rounded-2xl p-6 sm:p-8 min-h-[100px] sm:min-h-[120px] flex flex-col items-center justify-center">
+                  {userAnswer ? (
+                    <div className="text-center">
+                      <span className="text-5xl sm:text-6xl md:text-7xl font-bold text-blue-600">{userAnswer}</span>
+                      {!isNaN(parseInt(userAnswer)) && parseInt(userAnswer) >= 0 && parseInt(userAnswer) <= 81 && (
+                        <div className="text-lg sm:text-xl text-green-600 mt-3 font-semibold">✅ 유효한 답안</div>
+                      )}
                     </div>
                   ) : (
-                    speechSupported &&
-                    micPermissionGranted && (
-                      <button
-                        onClick={() => setShowTextInput(true)}
-                        className="text-sm text-gray-500 hover:text-gray-700 underline"
-                      >
-                        키보드로 입력하기
-                      </button>
-                    )
+                    <span className="text-xl sm:text-2xl text-gray-400 text-center px-4">
+                      {isListening ? "🎤 숫자를 말해주세요..." : "답을 기다리는 중..."}
+                    </span>
                   )}
                 </div>
-              </Card>
-            </div>
-          )}
 
-          {/* 결과 화면 */}
-          {gameState === "result" && (
-            <Card className="p-8 text-center">
-              <h2 className="text-3xl font-bold mb-6">퀴즈 완료! 🎉</h2>
+                {errorMessage && (
+                  <p className="text-base sm:text-lg text-red-600 font-medium text-center">⚠️ {errorMessage}</p>
+                )}
 
-              <div className="space-y-4 mb-8">
-                <div className="text-6xl font-bold text-blue-600">{result.percentage}%</div>
+                {/* 주요 버튼들 */}
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  {speechSupported && micPermissionGranted && !showTextInput && (
+                    <div className="space-y-3">
+                      <Button
+                        onClick={startListening}
+                        disabled={isListening}
+                        className={`text-2xl sm:text-3xl py-6 sm:py-8 w-full font-bold shadow-lg ${
+                          isListening ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
+                        }`}
+                      >
+                        {isListening ? "🎤 듣는 중... (클릭해서 중단)" : "🎤 음성으로 답하기"}
+                      </Button>
+                      {!isListening && (
+                        <p className="text-sm sm:text-base text-gray-500 text-center">
+                          한국어 숫자(일, 이, 삼...) 또는 아라비아 숫자로 말해주세요
+                          <br />
+                          예시: "십이", "열둘", "12", "스물넷", "24"
+                        </p>
+                      )}
+                      {isListening && (
+                        <p className="text-base sm:text-lg text-blue-600 text-center animate-pulse font-semibold">
+                          🎤 듣고 있습니다... 숫자를 말해주세요
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                <div className="text-xl text-gray-700">
-                  {result.total}문제 중 {result.correct}문제 정답
+                  <Button
+                    onClick={submitAnswer}
+                    disabled={!userAnswer.trim() || isListening}
+                    className="text-2xl sm:text-3xl py-6 sm:py-8 font-bold shadow-lg"
+                  >
+                    ✅ 답안 제출
+                  </Button>
                 </div>
 
-                <div className="text-lg">
-                  {result.percentage >= 90
-                    ? "🏆 완벽해요!"
-                    : result.percentage >= 80
-                    ? "🎯 잘했어요!"
-                    : result.percentage >= 70
-                    ? "👍 좋아요!"
-                    : result.percentage >= 60
-                    ? "📚 조금 더 연습해봐요!"
-                    : "💪 다시 도전해봐요!"}
-                </div>
+                {/* 텍스트 입력 옵션 */}
+                {showTextInput ? (
+                  <div className="pt-4 border-t border-gray-200">
+                    <Input
+                      type="text"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      className="text-center text-2xl"
+                      placeholder="키보드로 답을 입력하세요"
+                      disabled={isListening}
+                    />
+                  </div>
+                ) : (
+                  speechSupported &&
+                  micPermissionGranted && (
+                    <button
+                      onClick={() => setShowTextInput(true)}
+                      className="text-sm text-gray-500 hover:text-gray-700 underline"
+                    >
+                      키보드로 입력하기
+                    </button>
+                  )
+                )}
               </div>
-
-              <Button onClick={resetGame} className="text-xl px-8 py-3">
-                다시 하기
-              </Button>
             </Card>
-          )}
+          </div>
+        )}
 
-          {/* 정답/오답 오버레이 */}
-          {showFeedback && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div
-                className={`bg-white rounded-lg p-8 text-center ${
-                  isCorrect ? "border-4 border-green-500" : "border-4 border-red-500"
-                }`}
-              >
-                <div className={`text-6xl mb-4 ${isCorrect ? "text-green-500" : "text-red-500"}`}>
-                  {isCorrect ? "🎉" : "❌"}
-                </div>
-                <div className={`text-3xl font-bold mb-2 ${isCorrect ? "text-green-500" : "text-red-500"}`}>
-                  {isCorrect ? "정답!" : "틀렸어요!"}
-                </div>
-                {!isCorrect && <div className="text-xl text-gray-700">정답: {currentQuestion.answer}</div>}
+        {/* 결과 화면 */}
+        {gameState === "result" && (
+          <Card className="p-8 sm:p-12 text-center shadow-none">
+            <h2 className="text-4xl sm:text-5xl font-bold mb-8 sm:mb-12 text-gray-800">퀴즈 완료! 🎉</h2>
+
+            <div className="space-y-6 sm:space-y-8 mb-10 sm:mb-12">
+              <div className="text-8xl sm:text-9xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {result.percentage}%
+              </div>
+
+              <div className="text-2xl sm:text-3xl text-gray-700 font-semibold">
+                {result.total}문제 중 <span className="text-blue-600">{result.correct}문제</span> 정답
+              </div>
+
+              <div className="text-3xl sm:text-4xl font-bold">
+                {result.percentage >= 90
+                  ? "🏆 완벽해요!"
+                  : result.percentage >= 80
+                  ? "🎯 잘했어요!"
+                  : result.percentage >= 70
+                  ? "👍 좋아요!"
+                  : result.percentage >= 60
+                  ? "📚 조금 더 연습해봐요!"
+                  : "💪 다시 도전해봐요!"}
               </div>
             </div>
-          )}
-        </div>
+
+            <Button
+              onClick={resetGame}
+              className="w-full text-2xl sm:text-3xl py-6 sm:py-8 font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-600 hover:to-purple-600 shadow-xl"
+            >
+              🔄 다시 하기
+            </Button>
+          </Card>
+        )}
+
+        {/* 정답/오답 오버레이 */}
+        {showFeedback && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div
+              className={`bg-white rounded-2xl p-8 sm:p-12 text-center shadow-2xl ${
+                isCorrect ? "border-8 border-green-500" : "border-8 border-red-500"
+              }`}
+            >
+              <div className={`text-8xl sm:text-9xl mb-6 ${isCorrect ? "text-green-500" : "text-red-500"}`}>
+                {isCorrect ? "🎉" : "❌"}
+              </div>
+              <div className={`text-4xl sm:text-5xl font-bold mb-4 ${isCorrect ? "text-green-500" : "text-red-500"}`}>
+                {isCorrect ? "정답!" : "틀렸어요!"}
+              </div>
+              {!isCorrect && (
+                <div className="text-8xl sm:text-8xl text-gray-700 font-semibold">정답: {currentQuestion.answer}</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
