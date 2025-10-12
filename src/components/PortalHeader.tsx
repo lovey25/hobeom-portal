@@ -125,11 +125,7 @@ export function PortalHeader() {
       {isMobileMenuOpen && (
         <>
           {/* 오버레이 배경 */}
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-            onClick={closeMobileMenu}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={closeMobileMenu} aria-hidden="true" />
 
           {/* 슬라이드 메뉴 */}
           <div className="fixed top-0 right-0 bottom-0 w-64 bg-white shadow-xl z-50 md:hidden transform transition-transform duration-300 ease-in-out">

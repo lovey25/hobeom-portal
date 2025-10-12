@@ -148,3 +148,67 @@ export interface TripItemFilter {
   category?: string | "all";
   isPrepared?: boolean | "all";
 }
+
+// ============================================
+// Daily Tasks Types
+// ============================================
+
+/**
+ * 일일 할일 아이템
+ */
+export interface DailyTask {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  importance: number; // 1-3 (1: 낮음, 3: 높음)
+  isActive: boolean;
+  createdAt: string;
+  displayOrder: number; // 표시 순서
+}
+
+/**
+ * 일일 할일 완료 로그
+ */
+export interface DailyTaskLog {
+  id: string;
+  userId: string;
+  taskId: string;
+  date: string; // YYYY-MM-DD
+  isCompleted: boolean;
+  completedAt: string | null;
+}
+
+/**
+ * 일일 통계
+ */
+export interface DailyStat {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  totalTasks: number;
+  completedTasks: number;
+  completionRate: number; // 0-100
+  createdAt: string;
+}
+
+/**
+ * 할일 + 완료 상태
+ */
+export interface DailyTaskWithStatus extends DailyTask {
+  isCompleted: boolean;
+  completedAt?: string;
+}
+
+/**
+ * 사용자별 할일 현황 (관리자용)
+ */
+export interface UserDailyStatus {
+  userId: string;
+  username: string;
+  name: string;
+  totalTasks: number;
+  completedTasks: number;
+  completionRate: number;
+  tasks: DailyTaskWithStatus[];
+}

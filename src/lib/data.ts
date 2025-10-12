@@ -958,3 +958,411 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
     return [];
   }
 }
+
+// ============================================
+// Daily Tasks Data Functions
+// ============================================
+
+/**
+ * 사용자의 할일 목록 조회
+ */
+export async function getDailyTasks(userId: string, activeOnly = true): Promise<any[]> {
+  try {
+    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    let tasks = rawTasks.filter((task) => task.user_id === userId);
+
+    if (activeOnly) {
+      tasks = tasks.filter((task) => task.is_active === "true");
+    }
+
+    return tasks
+      .map((task) => ({
+        id: task.id,
+        userId: task.user_id,
+        title: task.title,
+        description: task.description,
+        importance: parseInt(task.importance),
+        isActive: task.is_active === "true",
+        createdAt: task.created_at,
+        displayOrder: parseInt(task.display_order) || 0,
+      }))
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  } catch (error) {
+    console.error("Error reading daily tasks:", error);
+    return [];
+  }
+}
+
+/**
+ * 할일 생성
+ */
+export async function createDailyTask(data: {
+  userId: string;
+  title: string;
+  description: string;
+  importance: number;
+}): Promise<any> {
+  try {
+    const rawTasks = await readCSV<any>("daily-tasks.csv");
+
+    const maxId = rawTasks.reduce((max, task) => Math.max(max, parseInt(task.id) || 0), 0);
+    const newId = (maxId + 1).toString();
+
+    // 해당 사용자의 최대 display_order 찾기
+    const userTasks = rawTasks.filter((t) => t.user_id === data.userId && t.is_active === "true");
+    const maxOrder = userTasks.reduce((max, task) => Math.max(max, parseInt(task.display_order) || 0), 0);
+
+    const newTask = {
+      id: newId,
+      user_id: data.userId,
+      title: data.title,
+      description: data.description,
+      importance: data.importance.toString(),
+      is_active: "true",
+      created_at: new Date().toISOString(),
+      display_order: (maxOrder + 1).toString(),
+    };
+
+    rawTasks.push(newTask);
+    await writeCSV("daily-tasks.csv", rawTasks);
+
+    return {
+      id: newId,
+      userId: data.userId,
+      title: data.title,
+      description: data.description,
+      importance: data.importance,
+      isActive: true,
+      createdAt: newTask.created_at,
+      displayOrder: maxOrder + 1,
+    };
+  } catch (error) {
+    console.error("Error creating daily task:", error);
+    throw error;
+  }
+}
+
+/**
+ * 할일 수정
+ */
+export async function updateDailyTask(
+  taskId: string,
+  data: {
+    title?: string;
+    description?: string;
+    importance?: number;
+    isActive?: boolean;
+  }
+): Promise<void> {
+  try {
+    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const taskIndex = rawTasks.findIndex((task) => task.id === taskId);
+
+    if (taskIndex === -1) {
+      throw new Error("할일을 찾을 수 없습니다.");
+    }
+
+    if (data.title !== undefined) rawTasks[taskIndex].title = data.title;
+    if (data.description !== undefined) rawTasks[taskIndex].description = data.description;
+    if (data.importance !== undefined) rawTasks[taskIndex].importance = data.importance.toString();
+    if (data.isActive !== undefined) rawTasks[taskIndex].is_active = data.isActive.toString();
+
+    await writeCSV("daily-tasks.csv", rawTasks);
+  } catch (error) {
+    console.error("Error updating daily task:", error);
+    throw error;
+  }
+}
+
+/**
+ * 할일 삭제 (소프트 삭제)
+ */
+export async function deleteDailyTask(taskId: string): Promise<void> {
+  try {
+    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const taskIndex = rawTasks.findIndex((task) => task.id === taskId);
+
+    if (taskIndex === -1) {
+      throw new Error("할일을 찾을 수 없습니다.");
+    }
+
+    rawTasks[taskIndex].is_active = "false";
+    await writeCSV("daily-tasks.csv", rawTasks);
+  } catch (error) {
+    console.error("Error deleting daily task:", error);
+    throw error;
+  }
+}
+
+/**
+ * 할일 순서 변경
+ */
+export async function reorderDailyTasks(userId: string, taskId: string, direction: "up" | "down"): Promise<void> {
+  try {
+    const rawTasks = await readCSV<any>("daily-tasks.csv");
+
+    // 사용자의 활성 할일만 필터링
+    const userTasks = rawTasks.filter((t) => t.user_id === userId && t.is_active === "true");
+    userTasks.sort((a, b) => (parseInt(a.display_order) || 0) - (parseInt(b.display_order) || 0));
+
+    // 현재 할일 찾기
+    const currentIndex = userTasks.findIndex((t) => t.id === taskId);
+    if (currentIndex === -1) throw new Error("할일을 찾을 수 없습니다.");
+
+    // 교환할 인덱스 계산
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= userTasks.length) {
+      return; // 이동 불가 (맨 위/아래)
+    }
+
+    // display_order 교환
+    const tempOrder = userTasks[currentIndex].display_order;
+    userTasks[currentIndex].display_order = userTasks[targetIndex].display_order;
+    userTasks[targetIndex].display_order = tempOrder;
+
+    // 전체 목록에 업데이트
+    userTasks.forEach((userTask) => {
+      const index = rawTasks.findIndex((t) => t.id === userTask.id);
+      if (index !== -1) {
+        rawTasks[index].display_order = userTask.display_order;
+      }
+    });
+
+    await writeCSV("daily-tasks.csv", rawTasks);
+  } catch (error) {
+    console.error("Error reordering daily tasks:", error);
+    throw error;
+  }
+}
+
+/**
+ * 특정 날짜의 할일 로그 조회
+ */
+export async function getDailyTaskLogs(userId: string, date: string): Promise<any[]> {
+  try {
+    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+    const logs = rawLogs.filter((log) => log.user_id === userId && log.date === date);
+
+    return logs.map((log) => ({
+      id: log.id,
+      userId: log.user_id,
+      taskId: log.task_id,
+      date: log.date,
+      isCompleted: log.is_completed === "true",
+      completedAt: log.completed_at || null,
+    }));
+  } catch (error) {
+    console.error("Error reading daily task logs:", error);
+    return [];
+  }
+}
+
+/**
+ * 할일 완료 상태 토글
+ */
+export async function toggleTaskCompletion(userId: string, taskId: string, date: string): Promise<void> {
+  try {
+    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+    const logIndex = rawLogs.findIndex((log) => log.user_id === userId && log.task_id === taskId && log.date === date);
+
+    if (logIndex === -1) {
+      // 로그가 없으면 새로 생성
+      const maxId = rawLogs.reduce((max, log) => Math.max(max, parseInt(log.id) || 0), 0);
+      const newLog = {
+        id: (maxId + 1).toString(),
+        user_id: userId,
+        task_id: taskId,
+        date: date,
+        is_completed: "true",
+        completed_at: new Date().toISOString(),
+      };
+      rawLogs.push(newLog);
+    } else {
+      // 기존 로그 토글
+      const currentStatus = rawLogs[logIndex].is_completed === "true";
+      rawLogs[logIndex].is_completed = (!currentStatus).toString();
+      rawLogs[logIndex].completed_at = !currentStatus ? new Date().toISOString() : "";
+    }
+
+    await writeCSV("daily-task-logs.csv", rawLogs);
+  } catch (error) {
+    console.error("Error toggling task completion:", error);
+    throw error;
+  }
+}
+
+/**
+ * 일일 통계 저장
+ */
+export async function saveDailyStats(
+  userId: string,
+  date: string,
+  totalTasks: number,
+  completedTasks: number
+): Promise<void> {
+  try {
+    const rawStats = await readCSV<any>("daily-stats.csv");
+
+    // 해당 날짜의 기록이 이미 있는지 확인
+    const existingIndex = rawStats.findIndex((stat) => stat.user_id === userId && stat.date === date);
+
+    const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : "0.00";
+
+    if (existingIndex !== -1) {
+      // 기존 기록 업데이트
+      rawStats[existingIndex].total_tasks = totalTasks.toString();
+      rawStats[existingIndex].completed_tasks = completedTasks.toString();
+      rawStats[existingIndex].completion_rate = completionRate;
+      rawStats[existingIndex].created_at = new Date().toISOString();
+    } else {
+      // 새 기록 추가
+      const maxId = rawStats.reduce((max, stat) => Math.max(max, parseInt(stat.id) || 0), 0);
+      const newStat = {
+        id: (maxId + 1).toString(),
+        user_id: userId,
+        date: date,
+        total_tasks: totalTasks.toString(),
+        completed_tasks: completedTasks.toString(),
+        completion_rate: completionRate,
+        created_at: new Date().toISOString(),
+      };
+      rawStats.push(newStat);
+    }
+
+    await writeCSV("daily-stats.csv", rawStats);
+  } catch (error) {
+    console.error("Error saving daily stats:", error);
+    throw error;
+  }
+}
+
+/**
+ * 일일 통계 조회
+ */
+export async function getDailyStats(userId: string, startDate?: string, endDate?: string): Promise<any[]> {
+  try {
+    const rawStats = await readCSV<any>("daily-stats.csv");
+    let stats = rawStats.filter((stat) => stat.user_id === userId);
+
+    if (startDate) {
+      stats = stats.filter((stat) => stat.date >= startDate);
+    }
+
+    if (endDate) {
+      stats = stats.filter((stat) => stat.date <= endDate);
+    }
+
+    return stats
+      .map((stat) => ({
+        id: stat.id,
+        userId: stat.user_id,
+        date: stat.date,
+        totalTasks: parseInt(stat.total_tasks),
+        completedTasks: parseInt(stat.completed_tasks),
+        completionRate: parseFloat(stat.completion_rate),
+        createdAt: stat.created_at,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  } catch (error) {
+    console.error("Error reading daily stats:", error);
+    return [];
+  }
+}
+
+/**
+ * 할일 리셋 및 완료율 기록 (사용자가 며칠간 접속하지 않은 경우 고려)
+ */
+export async function resetDailyTasksForUser(userId: string, lastAccessDate: string): Promise<void> {
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // 마지막 접속일과 오늘 사이의 모든 날짜에 대해 완료율 기록
+    const lastDate = new Date(lastAccessDate);
+    const currentDate = new Date(today);
+
+    // 마지막 접속일의 완료율 계산 및 저장
+    while (lastDate < currentDate) {
+      const dateStr = lastDate.toISOString().split("T")[0];
+
+      // 해당 날짜의 로그 조회
+      const logs = await getDailyTaskLogs(userId, dateStr);
+      const tasks = await getDailyTasks(userId);
+
+      const totalTasks = tasks.length;
+      const completedTasks = logs.filter((log) => log.isCompleted).length;
+
+      // 통계 저장 (이미 있으면 업데이트, 없으면 생성)
+      await saveDailyStats(userId, dateStr, totalTasks, completedTasks);
+
+      // 다음 날로 이동
+      lastDate.setDate(lastDate.getDate() + 1);
+    }
+
+    // 오늘 날짜의 로그 초기화 (새로운 날짜의 로그 생성)
+    const tasks = await getDailyTasks(userId);
+    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+
+    // 오늘 날짜의 기존 로그 제거
+    const filteredLogs = rawLogs.filter((log) => !(log.user_id === userId && log.date === today));
+
+    // 각 활성 할일에 대해 미완료 로그 생성
+    let maxId = filteredLogs.reduce((max, log) => Math.max(max, parseInt(log.id) || 0), 0);
+
+    for (const task of tasks) {
+      maxId += 1;
+      filteredLogs.push({
+        id: maxId.toString(),
+        user_id: userId,
+        task_id: task.id,
+        date: today,
+        is_completed: "false",
+        completed_at: "",
+      });
+    }
+
+    await writeCSV("daily-task-logs.csv", filteredLogs);
+  } catch (error) {
+    console.error("Error resetting daily tasks:", error);
+    throw error;
+  }
+}
+
+/**
+ * 모든 사용자의 오늘 할일 현황 조회 (관리자용)
+ */
+export async function getAllUsersDailyStatus(date: string): Promise<any[]> {
+  try {
+    const users = await getAllUsers();
+    const result = [];
+
+    for (const user of users) {
+      const tasks = await getDailyTasks(user.id);
+      const logs = await getDailyTaskLogs(user.id, date);
+
+      const totalTasks = tasks.length;
+      const completedTasks = logs.filter((log) => log.isCompleted).length;
+      const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : "0.00";
+
+      result.push({
+        userId: user.id,
+        username: user.username,
+        name: user.name,
+        totalTasks,
+        completedTasks,
+        completionRate: parseFloat(completionRate),
+        tasks: tasks.map((task) => {
+          const log = logs.find((l) => l.taskId === task.id);
+          return {
+            ...task,
+            isCompleted: log?.isCompleted || false,
+          };
+        }),
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error getting all users daily status:", error);
+    return [];
+  }
+}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppIconGrid } from "@/components/AppIconGrid";
+import { TodayTaskCard } from "@/components/TodayTaskCard";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
@@ -95,26 +96,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="text-center">
-              <div className="text-3xl mb-2">📈</div>
-              <h3 className="text-lg font-semibold text-gray-900">활성 프로젝트</h3>
-              <p className="text-2xl font-bold text-blue-600">12</p>
-            </Card>
-
-            <Card className="text-center">
-              <div className="text-3xl mb-2">⏰</div>
-              <h3 className="text-lg font-semibold text-gray-900">오늘 할일</h3>
-              <p className="text-2xl font-bold text-green-600">8</p>
-            </Card>
-
-            <Card className="text-center">
-              <div className="text-3xl mb-2">📊</div>
-              <h3 className="text-lg font-semibold text-gray-900">완료율</h3>
-              <p className="text-2xl font-bold text-purple-600">85%</p>
-            </Card>
-          </div>
+          {/* Today Tasks Card */}
+          <div className="mb-8">{user && <TodayTaskCard userId={user.id} />}</div>
 
           {/* Dashboard Apps */}
           <div className="space-y-8">
