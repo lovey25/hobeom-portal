@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { createUser, getUserByUsername, getUserByEmail } from "@/lib/data";
+import { createUser, getUserByUsername, getUserByEmail, initializeUserAppSettings } from "@/lib/data";
 import { ApiResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
       passwordHash,
       role: "user", // 기본적으로 일반 사용자로 생성
     });
+
+    // 사용자 앱 설정 초기화
+    await initializeUserAppSettings(newUser.id);
 
     const response: ApiResponse = {
       success: true,

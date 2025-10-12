@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppsByCategory } from "@/lib/data";
+import { getAppsByCategory, getAllApps } from "@/lib/data";
+import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as "public" | "dashboard" | "admin";
+    const includeInactive = searchParams.get("includeInactive") === "true";
 
     if (!category) {
       const response: ApiResponse = {
@@ -15,7 +17,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    const apps = await getAppsByCategory(category);
+    let apps;
+
+    // 관리자가 includeInactive=true로 요청한 경우 비활성화된 앱도 포함
+    if (includeInactive) {
+      const token = request.headers.get("authorization")?.replace("Bearer ", "");
+      const decoded = verifyToken(token || "");
+
+      if (decoded?.role === "admin") {
+        const allApps = await getAllApps();
+        apps = allApps.filter((app) => app.category === category);
+      } else {
+        // 일반 사용자는 활성화된 앱만
+        apps = await getAppsByCategory(category);
+      }
+    } else {
+      apps = await getAppsByCategory(category);
+    }
 
     const response: ApiResponse = {
       success: true,

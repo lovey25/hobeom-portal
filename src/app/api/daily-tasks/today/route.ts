@@ -5,6 +5,7 @@ import {
   toggleTaskCompletion,
   resetDailyTasksForUser,
   saveDailyStats,
+  addActivityLog,
 } from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
@@ -116,6 +117,16 @@ export async function PATCH(request: NextRequest) {
     const completedTasks = logs.filter((l) => l.isCompleted).length;
 
     await saveDailyStats(decoded.id, date, totalTasks, completedTasks);
+
+    // 활동 로그 추가 (완료된 할일 개수가 의미있을 때만)
+    if (completedTasks > 0 && completedTasks % 3 === 0) {
+      await addActivityLog(
+        decoded.id,
+        "task_complete",
+        `할일 ${completedTasks}개를 완료했습니다`,
+        "5" // 오늘할일 앱 ID
+      );
+    }
 
     const response: ApiResponse = {
       success: true,

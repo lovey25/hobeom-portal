@@ -6,6 +6,7 @@ export interface User {
   role: "admin" | "user";
   createdAt: string;
   lastLogin?: string;
+  passwordHash?: string;
 }
 
 export interface AuthResponse {
@@ -211,4 +212,66 @@ export interface UserDailyStatus {
   completedTasks: number;
   completionRate: number;
   tasks: DailyTaskWithStatus[];
+}
+
+// ============================================
+// User Settings Types
+// ============================================
+
+/**
+ * 사용자 설정
+ */
+export interface UserSetting {
+  id: string;
+  userId: string;
+  category: "display" | "daily_tasks" | "notifications" | "system";
+  key: string;
+  value: string;
+  updatedAt: string;
+}
+
+/**
+ * 설정 구성
+ */
+export interface SettingsConfig {
+  display: {
+    dashboardColumns: number;
+    cardSize: "small" | "medium" | "large";
+    language: "ko" | "en";
+  };
+  dailyTasks: {
+    resetTime: string;
+    excludeWeekends: boolean;
+    statsPeriod: number;
+    completionGoal: number;
+  };
+  notifications: {
+    dailyTasksEnabled: boolean;
+    travelPrepEnabled: boolean;
+    emailEnabled: boolean;
+  };
+}
+
+/**
+ * 사용자별 앱 설정
+ */
+export interface UserAppSetting {
+  id: string;
+  userId: string;
+  appId: string;
+  isVisible: boolean;
+  customOrder: number;
+  category: "public" | "dashboard" | "admin";
+}
+
+/**
+ * 활동 로그
+ */
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  actionType: string;
+  actionDescription: string;
+  createdAt: string;
+  appId?: string;
 }

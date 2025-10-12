@@ -1366,3 +1366,352 @@ export async function getAllUsersDailyStatus(date: string): Promise<any[]> {
     return [];
   }
 }
+
+// ============================================
+// User Settings Data Functions
+// ============================================
+
+/**
+ * 사용자 설정 조회
+ */
+export async function getUserSettings(userId: string): Promise<any> {
+  try {
+    const rawSettings = await readCSV<any>("user-settings.csv");
+    const userSettings = rawSettings.filter((s) => s.user_id === userId);
+
+    // 기본값
+    const defaultSettings = {
+      display: {
+        dashboardColumns: 4,
+        cardSize: "medium",
+        language: "ko",
+      },
+      dailyTasks: {
+        resetTime: "00:00",
+        excludeWeekends: false,
+        statsPeriod: 30,
+        completionGoal: 80,
+      },
+      notifications: {
+        dailyTasksEnabled: true,
+        travelPrepEnabled: true,
+        emailEnabled: false,
+      },
+    };
+
+    // CSV 데이터를 객체로 변환
+    userSettings.forEach((setting) => {
+      const category = setting.category as keyof typeof defaultSettings;
+      const key = setting.key;
+      const value = setting.value;
+
+      if (defaultSettings[category]) {
+        // 타입 변환
+        let parsedValue: any = value;
+        if (value === "true") parsedValue = true;
+        else if (value === "false") parsedValue = false;
+        else if (!isNaN(Number(value))) parsedValue = Number(value);
+
+        (defaultSettings[category] as any)[key] = parsedValue;
+      }
+    });
+
+    return defaultSettings;
+  } catch (error) {
+    console.error("Error getting user settings:", error);
+    // 파일이 없으면 기본값 반환
+    return {
+      display: {
+        dashboardColumns: 4,
+        cardSize: "medium",
+        language: "ko",
+      },
+      dailyTasks: {
+        resetTime: "00:00",
+        excludeWeekends: false,
+        statsPeriod: 30,
+        completionGoal: 80,
+      },
+      notifications: {
+        dailyTasksEnabled: true,
+        travelPrepEnabled: true,
+        emailEnabled: false,
+      },
+    };
+  }
+}
+
+/**
+ * 사용자 설정 업데이트
+ */
+export async function updateUserSetting(
+  userId: string,
+  category: string,
+  key: string,
+  value: string | number | boolean
+): Promise<void> {
+  try {
+    const rawSettings = await readCSV<any>("user-settings.csv");
+
+    // 기존 설정 찾기
+    const existingIndex = rawSettings.findIndex(
+      (s) => s.user_id === userId && s.category === category && s.key === key
+    );
+
+    const valueStr = String(value);
+
+    if (existingIndex !== -1) {
+      // 업데이트
+      rawSettings[existingIndex].value = valueStr;
+      rawSettings[existingIndex].updated_at = new Date().toISOString();
+    } else {
+      // 새로 추가
+      const maxId = rawSettings.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
+      rawSettings.push({
+        id: (maxId + 1).toString(),
+        user_id: userId,
+        category,
+        key,
+        value: valueStr,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    await writeCSV("user-settings.csv", rawSettings);
+  } catch (error) {
+    console.error("Error updating user setting:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여러 설정 일괄 업데이트
+ */
+export async function updateUserSettings(userId: string, settings: any): Promise<void> {
+  try {
+    const updates: Array<{ category: string; key: string; value: any }> = [];
+
+    // settings 객체를 flat하게 변환
+    Object.keys(settings).forEach((category) => {
+      Object.keys(settings[category]).forEach((key) => {
+        updates.push({
+          category,
+          key,
+          value: settings[category][key],
+        });
+      });
+    });
+
+    // 각 설정 업데이트
+    for (const update of updates) {
+      await updateUserSetting(userId, update.category, update.key, update.value);
+    }
+  } catch (error) {
+    console.error("Error updating user settings:", error);
+    throw error;
+  }
+}
+
+// ============================================
+// User App Settings Data Functions
+// ============================================
+
+/**
+ * 사용자별 앱 설정 조회
+ */
+export async function getUserAppSettings(userId: string): Promise<any[]> {
+  try {
+    await ensureDataFile("user-app-settings.csv");
+    const settings = await readCSV<any>("user-app-settings.csv");
+    return settings.filter((s) => s.user_id === userId);
+  } catch (error) {
+    console.error("Error getting user app settings:", error);
+    return [];
+  }
+}
+
+/**
+ * 사용자별 앱 표시 여부 업데이트
+ */
+export async function updateUserAppVisibility(userId: string, appId: string, isVisible: boolean): Promise<void> {
+  try {
+    const settings = await readCSV<any>("user-app-settings.csv");
+    const index = settings.findIndex((s) => s.user_id === userId && s.app_id === appId);
+
+    if (index !== -1) {
+      settings[index].is_visible = isVisible.toString();
+    } else {
+      // 없으면 새로 추가
+      const apps = await readCSV<any>("apps.csv");
+      const app = apps.find((a) => a.id === appId);
+      if (app) {
+        const maxId = settings.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
+        settings.push({
+          id: (maxId + 1).toString(),
+          user_id: userId,
+          app_id: appId,
+          is_visible: isVisible.toString(),
+          custom_order: app.order,
+          category: app.category,
+        });
+      }
+    }
+
+    await writeCSV("user-app-settings.csv", settings);
+  } catch (error) {
+    console.error("Error updating app visibility:", error);
+    throw error;
+  }
+}
+
+/**
+ * 사용자별 앱 순서 업데이트
+ */
+export async function updateUserAppOrder(
+  userId: string,
+  category: string,
+  appOrders: Array<{ appId: string; order: number }>
+): Promise<void> {
+  try {
+    const settings = await readCSV<any>("user-app-settings.csv");
+
+    for (const { appId, order } of appOrders) {
+      const index = settings.findIndex((s) => s.user_id === userId && s.app_id === appId && s.category === category);
+
+      if (index !== -1) {
+        settings[index].custom_order = order.toString();
+      }
+    }
+
+    await writeCSV("user-app-settings.csv", settings);
+  } catch (error) {
+    console.error("Error updating app order:", error);
+    throw error;
+  }
+}
+
+/**
+ * 사용자별 앱 설정 일괄 생성 (최초 사용자 생성 시)
+ */
+export async function initializeUserAppSettings(userId: string): Promise<void> {
+  try {
+    const settings = await readCSV<any>("user-app-settings.csv");
+    const existingSettings = settings.filter((s) => s.user_id === userId);
+
+    // 이미 설정이 있으면 스킵
+    if (existingSettings.length > 0) {
+      return;
+    }
+
+    const apps = await readCSV<any>("apps.csv");
+    let maxId = settings.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
+
+    for (const app of apps) {
+      settings.push({
+        id: (++maxId).toString(),
+        user_id: userId,
+        app_id: app.id,
+        is_visible: "true",
+        custom_order: app.order,
+        category: app.category,
+      });
+    }
+
+    await writeCSV("user-app-settings.csv", settings);
+  } catch (error) {
+    console.error("Error initializing user app settings:", error);
+    throw error;
+  }
+}
+
+// ============================================
+// Activity Logs Data Functions
+// ============================================
+
+/**
+ * 활동 로그 추가
+ */
+export async function addActivityLog(
+  userId: string,
+  actionType: string,
+  actionDescription: string,
+  appId?: string
+): Promise<void> {
+  try {
+    await ensureDataFile("activity-logs.csv");
+    const logs = await readCSV<any>("activity-logs.csv");
+    const maxId = logs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
+
+    logs.push({
+      id: (maxId + 1).toString(),
+      user_id: userId,
+      action_type: actionType,
+      action_description: actionDescription,
+      created_at: new Date().toISOString(),
+      app_id: appId || "",
+    });
+
+    await writeCSV("activity-logs.csv", logs);
+  } catch (error) {
+    console.error("Error adding activity log:", error);
+    throw error;
+  }
+}
+
+/**
+ * 사용자 활동 로그 조회 (최근 N개)
+ */
+export async function getActivityLogs(userId: string, limit = 10): Promise<any[]> {
+  try {
+    await ensureDataFile("activity-logs.csv");
+    const logs = await readCSV<any>("activity-logs.csv");
+    const userLogs = logs
+      .filter((l) => l.user_id === userId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
+
+    return userLogs.map((log) => ({
+      id: log.id,
+      userId: log.user_id,
+      actionType: log.action_type,
+      actionDescription: log.action_description,
+      createdAt: log.created_at,
+      appId: log.app_id,
+    }));
+  } catch (error) {
+    console.error("Error getting activity logs:", error);
+    return [];
+  }
+}
+
+// ============================================
+// 앱 전역 활성화 관리 (관리자 전용)
+// ============================================
+
+/**
+ * 앱의 전역 활성화 상태를 변경합니다 (관리자 전용)
+ */
+export async function updateAppGlobalStatus(appId: string, isActive: boolean): Promise<void> {
+  try {
+    const apps = await readCSV<any>("apps.csv");
+    const appIndex = apps.findIndex((app) => app.id === appId);
+
+    if (appIndex === -1) {
+      throw new Error("앱을 찾을 수 없습니다.");
+    }
+
+    apps[appIndex].is_active = isActive.toString();
+
+    await writeCSV("apps.csv", apps);
+  } catch (error) {
+    console.error("Error updating app global status:", error);
+    throw error;
+  }
+}
+
+/**
+ * 모든 앱 목록 조회 (관리자용 - 비활성화된 앱 포함)
+ */
+export async function getAllApps(): Promise<AppIcon[]> {
+  return await getApps();
+}

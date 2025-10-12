@@ -1,13 +1,13 @@
 id,name,description,icon,href,require_auth,category,order,is_active
 1,계산기,간단한 계산기 앱,🧮,/samples/calculator,false,public,1,true
 2,메모장,간단한 메모 작성 도구,📝,/samples/notepad,false,public,2,true
-3,날씨,현재 날씨 정보,🌤️,/samples/weather,false,public,3,true
+3,날씨,현재 날씨 정보,🌤️,/samples/weather,false,public,3,false
 4,곱셈구구,음성 인식 구구단 퀴즈,🔢,/samples/multiplication-quiz,false,public,4,true
 5,오늘할일,매일 할일 관리 및 완료율 추적,📋,/dashboard/daily-tasks,true,dashboard,1,true
 6,여행준비물,여행 준비물 체크리스트,🧳,/dashboard/travel-prep,true,dashboard,2,true
-7,할일관리,개인 할일 관리 시스템,✅,/dashboard/todo,true,dashboard,3,true
-8,파일관리,파일 업로드 및 관리,📁,/dashboard/files,true,dashboard,4,true
-9,데이터분석,CSV 데이터 분석 도구,📊,/dashboard/analytics,true,dashboard,5,true
+7,할일관리,개인 할일 관리 시스템,✅,/dashboard/todo,true,dashboard,3,false
+8,파일관리,파일 업로드 및 관리,📁,/dashboard/files,true,dashboard,4,false
+9,데이터분석,CSV 데이터 분석 도구,📊,/dashboard/analytics,true,dashboard,5,false
 10,설정,사용자 설정 및 프로필,⚙️,/dashboard/settings,true,dashboard,6,true
 11,사용자관리,사용자 및 권한 관리,👥,/dashboard/users,true,admin,1,true
 12,할일현황,전체 사용자 할일 현황 조회,👥,/dashboard/daily-tasks/admin,true,admin,2,true
