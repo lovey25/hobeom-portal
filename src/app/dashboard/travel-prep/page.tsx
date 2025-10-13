@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useNotification } from "@/contexts/NotificationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BagCard } from "./components/BagCard";
 import { ItemCard } from "./components/ItemCard";
@@ -15,6 +16,7 @@ export default function TravelPrepPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
+  const { notifyTravelItem } = useNotification();
 
   useEffect(() => {
     setPageTitle("여행 준비", "여행 짐을 체계적으로 관리하세요");
@@ -35,10 +37,12 @@ export default function TravelPrepPage() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [groupBy, setGroupBy] = useState<"none" | "category" | "importance">("none");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [travelNotificationDays, setTravelNotificationDays] = useState(3); // 기본값 3일
 
   // 초기 데이터 로드
   useEffect(() => {
     loadInitialData();
+    loadNotificationSettings();
   }, [user]);
 
   // 여행이 변경될 때마다 데이터 갱신
@@ -70,6 +74,21 @@ export default function TravelPrepPage() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+      if (result.success && result.data.notifications) {
+        setTravelNotificationDays(result.data.notifications.travelNotificationDays || 3);
+      }
+    } catch (error) {
+      console.error("알림 설정 로드 실패:", error);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -174,6 +193,22 @@ export default function TravelPrepPage() {
     });
   };
 
+  // 여행일까지 남은 날짜 계산
+  const shouldShowNotification = (): boolean => {
+    if (!currentTrip || !currentTrip.startDate) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tripDate = new Date(currentTrip.startDate);
+    tripDate.setHours(0, 0, 0, 0);
+
+    const daysUntilTrip = Math.ceil((tripDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 여행일이 지났거나 설정된 일수보다 많이 남았으면 알림 안 함
+    return daysUntilTrip >= 0 && daysUntilTrip <= travelNotificationDays;
+  };
+
   // 아이템 준비 상태 토글
   const toggleItemPrepared = async (itemId: string, currentState: boolean) => {
     try {
@@ -192,6 +227,20 @@ export default function TravelPrepPage() {
 
       if (res.ok) {
         await loadTripData();
+
+        // 준비 완료 시 알림 전송 (여행 날짜 조건 체크)
+        if (!currentState && shouldShowNotification()) {
+          const travelItem = allTravelItems.find((ti) => ti.id === itemId);
+          if (travelItem) {
+            const daysLeft = Math.ceil(
+              (new Date(currentTrip!.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+            );
+            await notifyTravelItem(
+              `"${travelItem.name}" 준비 완료! (D-${daysLeft})`,
+              `${window.location.origin}/dashboard/travel-prep`
+            );
+          }
+        }
       }
     } catch (error) {
       console.error("준비 상태 업데이트 실패:", error);

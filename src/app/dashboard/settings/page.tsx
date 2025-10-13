@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useNotification } from "@/contexts/NotificationContext";
 import { cookieUtils } from "@/lib/cookies";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 
 interface Settings {
   display: {
@@ -25,6 +27,10 @@ interface Settings {
     dailyTasksEnabled: boolean;
     travelPrepEnabled: boolean;
     emailEnabled: boolean;
+    travelNotificationDays: number; // 여행 N일 전부터 알림
+    encouragementEnabled: boolean; // 응원 메시지
+    dailyTasksReminderEnabled: boolean; // 접속 유도 알림
+    dailyTasksReminderTimes: string[]; // 알림 시간
   };
 }
 
@@ -33,10 +39,19 @@ type TabType = "profile" | "display" | "daily-tasks" | "notifications" | "apps";
 export default function SettingsPage() {
   const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
+  const { permission, isSupported, requestPermission, sendNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [testingNotification, setTestingNotification] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // 푸시 구독 상태 (다중 디바이스)
+  const [currentDeviceSubscribed, setCurrentDeviceSubscribed] = useState(false); // 현재 디바이스 구독 여부
+  const [allSubscriptions, setAllSubscriptions] = useState<any[]>([]); // 모든 디바이스 구독 목록
+  const [currentDeviceEndpoint, setCurrentDeviceEndpoint] = useState<string | null>(null); // 현재 디바이스 endpoint
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
 
   // 프로필 상태
   const [name, setName] = useState("");
@@ -158,6 +173,234 @@ export default function SettingsPage() {
     }
   };
 
+  // 푸시 구독 상태 확인 (다중 디바이스)
+  const checkPushSubscription = async () => {
+    try {
+      console.log("[Push] 구독 상태 확인 중...");
+
+      // 현재 디바이스의 endpoint 가져오기
+      const registration = await navigator.serviceWorker.ready;
+      const currentSubscription = await registration.pushManager.getSubscription();
+      const currentEndpoint = currentSubscription?.endpoint || null;
+      setCurrentDeviceEndpoint(currentEndpoint);
+
+      console.log("[Push] 현재 디바이스 endpoint:", currentEndpoint?.substring(0, 50) + "...");
+
+      // 서버에서 모든 구독 목록 가져오기
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/push/subscription", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+      console.log("[Push] 구독 상태 응답:", result);
+
+      if (result.success) {
+        const subscriptions = result.data.subscriptions || [];
+        setAllSubscriptions(subscriptions);
+
+        // 현재 디바이스가 구독되어 있는지 확인
+        const isCurrentDeviceSubscribed = subscriptions.some((sub: any) => sub.endpoint === currentEndpoint);
+        setCurrentDeviceSubscribed(isCurrentDeviceSubscribed);
+
+        console.log("[Push] 전체 구독 수:", subscriptions.length);
+        console.log("[Push] 현재 디바이스 구독 여부:", isCurrentDeviceSubscribed);
+      } else {
+        console.error("[Push] 구독 상태 확인 실패:", result.message);
+      }
+    } catch (error) {
+      console.error("[Push] 구독 상태 확인 오류:", error);
+    }
+  };
+
+  // 푸시 구독
+  const handlePushSubscribe = async () => {
+    try {
+      setIsSubscribing(true);
+      console.log("[Push] 구독 시작");
+
+      // 1. 알림 권한 확인
+      if (permission !== "granted") {
+        const result = await requestPermission();
+        if (result !== "granted") {
+          alert("알림 권한이 필요합니다");
+          return;
+        }
+      }
+
+      // 2. Service Worker 등록 확인
+      const registration = await navigator.serviceWorker.ready;
+      console.log("[Push] Service Worker 준비됨");
+
+      // 3. VAPID 공개키 가져오기
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        alert("서버 설정이 완료되지 않았습니다");
+        console.error("[Push] VAPID 공개키 없음");
+        return;
+      }
+
+      // 4. 기존 구독 확인 및 해제
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log("[Push] 기존 구독 존재, 해제 중...");
+        await existingSubscription.unsubscribe();
+      }
+
+      // 5. 푸시 구독 생성
+      console.log("[Push] 새 구독 생성 중...");
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidPublicKey,
+      });
+      console.log("[Push] 구독 생성됨:", subscription.endpoint);
+
+      // 6. 서버에 구독 정보 전송
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+
+      const result = await response.json();
+      console.log("[Push] 서버 응답:", result);
+
+      if (result.success) {
+        // 상태 즉시 업데이트
+        setCurrentDeviceSubscribed(true);
+        alert("이 디바이스에서 푸시 알림 구독이 완료되었습니다!");
+
+        // 서버에서 다시 확인 (검증용)
+        setTimeout(async () => {
+          await checkPushSubscription();
+        }, 500);
+      } else {
+        alert(`구독 실패: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error("[Push] 구독 오류:", error);
+      alert(`구독 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  // 현재 디바이스 푸시 구독 해제
+  const handlePushUnsubscribe = async () => {
+    if (!currentDeviceEndpoint) {
+      alert("현재 디바이스가 구독되어 있지 않습니다");
+      return;
+    }
+
+    if (!confirm("이 디바이스의 푸시 알림 구독을 해제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      setIsSubscribing(true);
+
+      // 1. Service Worker의 구독 해제
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        await subscription.unsubscribe();
+      }
+
+      // 2. 서버에서 구독 정보 삭제
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/push/unsubscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ endpoint: currentDeviceEndpoint }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentDeviceSubscribed(false);
+        alert("이 디바이스의 푸시 알림 구독이 해제되었습니다");
+        await checkPushSubscription();
+      } else {
+        alert(`구독 해제 실패: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error("[Push] 구독 해제 오류:", error);
+      alert(`구독 해제 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  // 특정 디바이스 구독 해제
+  const handleRemoveDevice = async (endpoint: string, deviceName: string) => {
+    if (!confirm(`"${deviceName}" 디바이스의 구독을 해제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/push/unsubscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ endpoint }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert(`"${deviceName}" 디바이스의 구독이 해제되었습니다`);
+        await checkPushSubscription();
+      } else {
+        alert(`구독 해제 실패: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error("[Push] 디바이스 구독 해제 오류:", error);
+      alert(`구독 해제 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  // 테스트 푸시 전송
+  const handleTestPush = async () => {
+    try {
+      setTestingPush(true);
+
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/push/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert("테스트 푸시가 전송되었습니다! 곧 알림이 표시됩니다.");
+      } else {
+        alert(`테스트 푸시 전송 실패: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error("Test push error:", error);
+      alert(`테스트 푸시 전송 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      setTestingPush(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && permission === "granted") {
+      checkPushSubscription();
+    }
+  }, [user, permission]);
+
   const handleDragStart = (e: React.DragEvent, appId: string) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/html", appId);
@@ -269,6 +512,27 @@ export default function SettingsPage() {
       alert("설정 저장 중 오류가 발생했습니다");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setTestingNotification(true);
+    try {
+      await sendNotification("🔔 테스트 알림", {
+        body: "알림이 정상적으로 작동합니다!",
+        icon: "/icon-192x192.png",
+        badge: "/badge-72x72.png",
+        tag: "test-notification",
+        requireInteraction: false,
+        data: {
+          url: window.location.origin + "/dashboard/settings",
+        },
+      });
+      console.log("✅ 테스트 알림이 전송되었습니다.");
+    } catch (error) {
+      console.error("테스트 알림 전송 실패:", error);
+    } finally {
+      setTestingNotification(false);
     }
   };
 
@@ -678,74 +942,351 @@ export default function SettingsPage() {
           {activeTab === "notifications" && (
             <Card>
               <h2 className="text-lg sm:text-xl font-bold mb-4">알림 설정</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="space-y-6">
+                {/* ========== 1단계: 브라우저 알림 권한 ========== */}
+                <div className="border-b pb-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div>
-                      <div className="font-medium text-gray-900">할일 알림</div>
-                      <div className="text-sm text-gray-500">할일 관련 알림을 받습니다</div>
+                      <h3 className="font-semibold text-gray-900">1️⃣ 브라우저 알림 권한</h3>
+                      <p className="text-xs text-gray-500 mt-1">먼저 브라우저에서 알림을 허용해야 합니다</p>
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications.dailyTasksEnabled}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          notifications: {
-                            ...settings.notifications,
-                            dailyTasksEnabled: e.target.checked,
-                          },
-                        })
-                      }
-                      className="w-5 h-5"
-                    />
-                  </label>
+                    {isSupported && permission === "default" && (
+                      <Button onClick={requestPermission} className="ml-4">
+                        권한 요청
+                      </Button>
+                    )}
+                  </div>
+
+                  {!isSupported ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm text-red-800">⚠️ 이 브라우저는 알림을 지원하지 않습니다</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* 권한 상태 표시 */}
+                      <div
+                        className={`rounded-lg p-3 ${
+                          permission === "granted"
+                            ? "bg-green-50 border border-green-200"
+                            : permission === "denied"
+                            ? "bg-red-50 border border-red-200"
+                            : "bg-gray-50 border border-gray-200"
+                        }`}
+                      >
+                        <div className="text-sm font-medium">
+                          {permission === "granted" && (
+                            <span className="text-green-800">✅ 권한 허용됨 - 알림을 받을 수 있습니다</span>
+                          )}
+                          {permission === "denied" && (
+                            <span className="text-red-800">🚫 권한 거부됨 - 브라우저 설정에서 변경하세요</span>
+                          )}
+                          {permission === "default" && (
+                            <span className="text-gray-800">❓ 아직 권한을 요청하지 않았습니다</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 테스트 알림 */}
+                      {permission === "granted" && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-800 mb-2">💡 기본 알림 테스트</p>
+                          <Button
+                            onClick={handleTestNotification}
+                            disabled={testingNotification}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                          >
+                            {testingNotification ? "전송 중..." : "🔔 테스트 알림 보내기"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-900">여행 준비 알림</div>
-                      <div className="text-sm text-gray-500">여행 준비 관련 알림을 받습니다</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications.travelPrepEnabled}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          notifications: {
-                            ...settings.notifications,
-                            travelPrepEnabled: e.target.checked,
-                          },
-                        })
-                      }
-                      className="w-5 h-5"
-                    />
-                  </label>
+                {/* ========== 2단계: PWA 설치 (선택 사항) ========== */}
+                <div className="border-b pb-4">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900">2️⃣ 앱으로 설치 (선택 사항)</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      브라우저를 완전히 닫아도 알림을 받으려면 PWA로 설치하세요
+                    </p>
+                  </div>
+
+                  <PWAInstallButton />
+
+                  <div className="mt-3 text-xs text-gray-600 bg-gray-50 rounded p-2">
+                    <b>💡 설치 시 장점:</b>
+                    <ul className="ml-4 mt-1 space-y-1">
+                      <li>• 브라우저가 완전히 꺼져도 알림 수신 (모바일)</li>
+                      <li>• 앱 아이콘으로 빠른 실행</li>
+                      <li>• 독립된 창에서 실행 (앱처럼)</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-900">이메일 알림</div>
-                      <div className="text-sm text-gray-500">이메일로 알림을 받습니다</div>
+                {/* ========== 3단계: 백그라운드 푸시 구독 (다중 디바이스) ========== */}
+                {isSupported && permission === "granted" && (
+                  <div className="border-b pb-4">
+                    <div className="mb-3">
+                      <h3 className="font-semibold text-gray-900">3️⃣ 백그라운드 푸시 알림</h3>
+                      <p className="text-xs text-gray-500 mt-1">여러 디바이스에서 개별적으로 구독할 수 있습니다</p>
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications.emailEnabled}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          notifications: {
-                            ...settings.notifications,
-                            emailEnabled: e.target.checked,
-                          },
-                        })
-                      }
-                      className="w-5 h-5"
-                    />
-                  </label>
+
+                    {/* 현재 디바이스 구독 상태 */}
+                    {currentDeviceSubscribed ? (
+                      <div className="space-y-3">
+                        {/* 현재 디바이스 구독 상태 */}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <p className="text-sm font-medium text-green-800 mb-1">✅ 이 디바이스 구독 중</p>
+                          <p className="text-xs text-green-700">
+                            현재 디바이스에서 리마인더와 여행 알림을 탭이 닫혀있어도 받을 수 있습니다
+                          </p>
+                        </div>
+
+                        {/* 액션 버튼 */}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            onClick={handleTestPush}
+                            disabled={testingPush}
+                            className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
+                          >
+                            {testingPush ? "전송 중..." : "🚀 모든 디바이스에 테스트"}
+                          </Button>
+                          <Button
+                            onClick={handlePushUnsubscribe}
+                            disabled={isSubscribing}
+                            variant="outline"
+                            className="text-sm"
+                          >
+                            {isSubscribing ? "처리 중..." : "이 디바이스 구독 해제"}
+                          </Button>
+                        </div>
+
+                        {/* 다른 디바이스 목록 */}
+                        {allSubscriptions.length > 1 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm font-semibold text-blue-900 mb-2">
+                              📱 다른 구독 디바이스 ({allSubscriptions.length - 1}개)
+                            </p>
+                            <div className="space-y-2">
+                              {allSubscriptions
+                                .filter((sub) => sub.endpoint !== currentDeviceEndpoint)
+                                .map((sub, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center justify-between bg-white rounded p-2 text-xs"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="font-medium text-gray-900">{sub.device_name}</div>
+                                      <div className="text-gray-500 text-[10px]">
+                                        {new Date(sub.last_used).toLocaleString("ko-KR")}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemoveDevice(sub.endpoint, sub.device_name)}
+                                      className="text-red-600 hover:text-red-800 font-medium px-2 py-1"
+                                    >
+                                      제거
+                                    </button>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+                          💡 <b>테스트 푸시</b>는 구독된 모든 디바이스에 전송됩니다!
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* 미구독 상태 */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <p className="text-sm font-medium text-gray-800 mb-1">❌ 구독하지 않음</p>
+                          <p className="text-xs text-gray-600">
+                            백그라운드에서 리마인더와 여행 알림을 받으려면 구독하세요
+                          </p>
+                        </div>
+                        <Button onClick={handlePushSubscribe} disabled={isSubscribing} className="w-full">
+                          {isSubscribing ? "구독 중..." : "✅ 푸시 알림 구독하기"}
+                        </Button>
+
+                        <div className="text-xs text-gray-600 bg-yellow-50 border border-yellow-200 rounded p-2">
+                          ⚠️ <b>중요:</b> 구독 후에도 브라우저는 실행 중이어야 합니다. 브라우저가 완전히 꺼지면 알림을
+                          받을 수 없습니다.
+                          <br />
+                          💡 <b>해결책:</b> 위의 "2️⃣ 앱으로 설치"를 통해 PWA로 설치하면 브라우저 종료와 무관하게 알림을
+                          받을 수 있습니다 (모바일 권장)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ========== 4단계: 알림 종류별 설정 ========== */}
+                <div className="border-b pb-4">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900">4️⃣ 알림 종류 설정</h3>
+                    <p className="text-xs text-gray-500 mt-1">받고 싶은 알림 종류를 선택하세요</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* 할일 알림 */}
+                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <div className="font-medium text-gray-900">📋 할일 알림</div>
+                        <div className="text-sm text-gray-500">할일 완료 시 알림</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.dailyTasksEnabled}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            notifications: {
+                              ...settings.notifications,
+                              dailyTasksEnabled: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-5 h-5"
+                        disabled={!isSupported || permission !== "granted"}
+                      />
+                    </label>
+
+                    {/* 여행 준비 알림 */}
+                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <div className="font-medium text-gray-900">✈️ 여행 준비 알림</div>
+                        <div className="text-sm text-gray-500">여행 D-day 알림</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.travelPrepEnabled}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            notifications: {
+                              ...settings.notifications,
+                              travelPrepEnabled: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-5 h-5"
+                        disabled={!isSupported || permission !== "granted"}
+                      />
+                    </label>
+
+                    {/* 여행 알림 시작일 설정 */}
+                    {settings.notifications.travelPrepEnabled && (
+                      <div className="ml-8 mt-2 flex items-center gap-2 text-sm">
+                        <span className="text-gray-600">여행</span>
+                        <select
+                          value={settings.notifications.travelNotificationDays}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              notifications: {
+                                ...settings.notifications,
+                                travelNotificationDays: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          className="px-2 py-1 border rounded text-sm bg-white"
+                        >
+                          <option value={1}>1일</option>
+                          <option value={3}>3일</option>
+                          <option value={7}>7일</option>
+                          <option value={14}>14일</option>
+                          <option value={30}>30일</option>
+                        </select>
+                        <span className="text-gray-600">전부터 알림</span>
+                      </div>
+                    )}
+
+                    {/* 응원 메시지 */}
+                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <div className="font-medium text-gray-900">🎉 할일 응원 메시지</div>
+                        <div className="text-sm text-gray-500">완료율 25%, 50%, 75%, 100% 달성 시</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.encouragementEnabled}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            notifications: {
+                              ...settings.notifications,
+                              encouragementEnabled: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-5 h-5"
+                        disabled={!isSupported || permission !== "granted"}
+                      />
+                    </label>
+
+                    {/* 리마인더 알림 */}
+                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <div className="font-medium text-gray-900">⏰ 할일 리마인더 알림</div>
+                        <div className="text-sm text-gray-500">정해진 시간에 할일 확인 유도</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.dailyTasksReminderEnabled}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            notifications: {
+                              ...settings.notifications,
+                              dailyTasksReminderEnabled: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-5 h-5"
+                        disabled={!isSupported || permission !== "granted"}
+                      />
+                    </label>
+
+                    {/* 리마인더 시간 선택 */}
+                    {settings.notifications.dailyTasksReminderEnabled && (
+                      <div className="ml-8 mt-2 space-y-2">
+                        <div className="text-sm font-medium text-gray-700">알림 시간 선택</div>
+                        <div className="flex flex-wrap gap-2">
+                          {["09:00", "12:00", "15:00", "18:00", "21:00"].map((time) => (
+                            <label
+                              key={time}
+                              className="flex items-center gap-1 px-2 py-1 bg-white border rounded cursor-pointer hover:bg-blue-50 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={settings.notifications.dailyTasksReminderTimes.includes(time)}
+                                onChange={(e) => {
+                                  const times = e.target.checked
+                                    ? [...settings.notifications.dailyTasksReminderTimes, time]
+                                    : settings.notifications.dailyTasksReminderTimes.filter((t) => t !== time);
+                                  setSettings({
+                                    ...settings,
+                                    notifications: {
+                                      ...settings.notifications,
+                                      dailyTasksReminderTimes: times,
+                                    },
+                                  });
+                                }}
+                                className="w-4 h-4"
+                              />
+                              <span>{time}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+                          💡 푸시 알림 구독 시 선택한 시간에 자동으로 알림이 전송됩니다
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Button onClick={handleSaveSettings} disabled={saving}>

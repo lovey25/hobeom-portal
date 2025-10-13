@@ -4,50 +4,40 @@ Next.js 15와 React 19로 구축한 모던 웹 포털 플랫폼
 
 ## ✨ 주요 기능
 
-### 🌐 퍼블릭 앱## 🔧 확장하기
+### 🌐 퍼블릭 앱
 
-새로운 앱 추가는 간단합니다:
-
-1. `data/apps.csv`에 앱 정보 추가
-2. `src/app/` 하위에 새 라우트 생성
-3. 필요 시 API 엔드포인트 추가
-4. 앱 폴더에 README.md 작성
-
-## 📝 최근 업데이트
-
-### v0.3.0 - 2024년 12월 (현재)
-
-**신규 기능:**
-
-- ✨ **CSV 편집기 앱** (관리자 전용)
-
-  - 엑셀 스타일 스프레드시트 인터페이스
-  - 클릭/더블클릭 모드 (선택/편집)
-  - 키보드 네비게이션 (Tab/Enter/방향키)
-  - 컬럼 정렬 및 리사이징
-  - 자동 백업 기능
-
-- 🎯 **여행 준비 앱 UX 개선**
-
-  - 아코디언 그룹화 시스템 (분류별/중요도별)
-  - 전체 접기/펴기 기능
-  - 그룹별 일괄 선택
-  - 미배정 아이템 전용 카드
-
-- 🐛 **버그 수정**
-  - 가방 삭제 시 데이터 무결성 보장
-  - 배정된 아이템의 bagId 자동 초기화
-  - 대시보드 앱 로딩 문제 해결
-
-**기술 개선:**
-
-- 배치 작업 패턴 강화 (CSV race condition 방지)
-- API 검증 로직 개선 (빈 문자열 허용)
-- Set 기반 collapse 상태 관리
-
-상세한 변경 내역은 [CHANGELOG.md](CHANGELOG.md) 참고- **계산기**: 기본 사칙연산
-
+- **계산기**: 기본 사칙연산
 - **메모장**: 로컬 스토리지 기반 메모 관리
+- **날씨**: 날씨 정보 조회
+
+### � 대시보드 앱 (로그인 필요)
+
+**사용자 앱:**
+
+- **여행 준비**: 여행별 준비물 체크리스트 (가방 배정, 그룹화)
+- **설정**: 프로필, 표시, 알림, 푸시 구독 관리
+- **할일 현황**: 할일 통계 대시보드
+
+**관리자 전용:**
+
+- **사용자 관리**: 전체 사용자 CRUD 및 권한 관리
+- **CSV 편집기**: 엑셀 스타일 데이터 편집 도구
+- **푸시알림테스트**: 구독 디바이스에 푸시 전송 테스트
+
+### 🔔 백그라운드 푸시 알림
+
+- **Web Push API**: 탭이 닫혀있어도 알림 수신
+- **다중 디바이스 지원**: 여러 디바이스에서 동시 구독
+- **자동 디바이스 감지**: 브라우저, OS, 디바이스 타입 자동 인식
+- **알림 종류**: 할일 리마인더, 여행 준비 알림
+- **관리자 도구**: 브로드캐스트, 특정 사용자/디바이스 전송
+
+### 📱 PWA (Progressive Web App)
+
+- **앱처럼 설치**: 데스크톱/모바일에 설치 가능
+- **오프라인 지원**: 기본 기능 오프라인 사용
+- **백그라운드 알림**: 브라우저 꺼져도 알림 수신 (모바일)
+- **빠른 실행**: 앱 아이콘 클릭으로 즉시 실행
 - **날씨**: 샘플 날씨 정보
 
 [→ 샘플 앱 상세 문서](src/app/samples/README.md)
@@ -117,28 +107,67 @@ docs/                     # 공통 문서
 
 ## 📚 문서
 
-### 공통 가이드
+### 공통 문서 (`docs/`)
 
 - [시작하기](docs/getting-started.md) - 설치, 실행, 환경 설정
 - [아키텍처](docs/architecture.md) - 프로젝트 구조 및 설계
 - [배포](docs/deployment.md) - 프로덕션 배포 가이드
+- [앱 관리](docs/app-management.md) - 앱 표시/숨김 및 전역 활성화
+- [푸시 알림 & PWA](docs/push-pwa-user-guide.md) - 백그라운드 알림 및 앱 설치 가이드
 
-### 앱별 문서
+### 기능별 개발자 문서 (각 폴더의 `README.md`)
 
-- [여행 준비 앱](src/app/dashboard/travel-prep/README.md) - 기능, API, 데이터 구조
-- [사용자 관리](src/app/dashboard/users/README.md) - 권한 관리, API
+**대시보드 앱:**
+
+- [설정](src/app/dashboard/settings/README.md) - 프로필, 표시, 알림, Web Push, PWA
+- [여행 준비](src/app/dashboard/travel-prep/README.md) - 준비물 관리, 아코디언 그룹화
+- [사용자 관리](src/app/dashboard/users/README.md) - 권한 관리, CRUD API
+- [CSV 편집기](src/app/dashboard/csv-editor/README.md) - 스프레드시트 인터페이스
+- [할일 현황](src/app/dashboard/daily-tasks/README.md) - 통계 및 현황 대시보드
+
+**관리자 전용:**
+
+- [푸시알림테스트](src/app/dashboard/admin/push-test/README.md) - 관리자 푸시 전송 도구
+
+**퍼블릭 앱:**
+
 - [샘플 앱들](src/app/samples/README.md) - 계산기, 메모장, 날씨
 
-## 🔧 확장하기
+## � 빠른 시작
 
-새로운 앱 추가는 간단합니다:
+```bash
+# 1. 의존성 설치
+npm install
 
-1. `data/apps.csv`에 앱 정보 추가
-2. `src/app/` 하위에 새 라우트 생성
-3. 필요 시 API 엔드포인트 추가
-4. 앱 폴더에 README.md 작성
+# 2. 개발 데이터 초기화
+bash scripts/init-dev.sh
 
-## � 최근 업데이트
+# 3. (선택) VAPID 키 생성 (푸시 알림 사용 시)
+node scripts/generate-vapid-keys.js
+
+# 4. 개발 서버 실행
+npm run dev
+
+# 5. (선택) 푸시 스케줄러 실행 (백그라운드 알림 사용 시)
+npm run push-scheduler
+```
+
+**테스트 계정:**
+
+- 관리자: `admin / password`
+- 일반 사용자: `user1 / password`, `demo / password`
+
+## �🔧 확장하기
+
+새로운 앱 추가 5단계:
+
+1. `data/apps.csv`에 앱 메타데이터 추가
+2. `src/app/{samples|dashboard}/[app-name]/page.tsx` 생성
+3. (필요 시) `src/app/api/[api-name]/route.ts` API 엔드포인트 추가
+4. 앱 폴더에 `README.md` 개발자 문서 작성
+5. 데이터 저장이 필요하면 `data/[table].csv` + `data.ts` 함수 추가
+
+## 📝 최근 업데이트
 
 [CHANGELOG.md](CHANGELOG.md) 참고
 

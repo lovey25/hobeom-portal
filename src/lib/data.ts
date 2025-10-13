@@ -1396,6 +1396,10 @@ export async function getUserSettings(userId: string): Promise<any> {
         dailyTasksEnabled: true,
         travelPrepEnabled: true,
         emailEnabled: false,
+        travelNotificationDays: 3, // 여행 3일 전부터 알림
+        encouragementEnabled: true, // 응원 메시지 활성화
+        dailyTasksReminderEnabled: false, // 접속 유도 알림 비활성화
+        dailyTasksReminderTimes: ["09:00", "12:00", "18:00", "21:00"], // 기본 알림 시간
       },
     };
 
@@ -1714,4 +1718,191 @@ export async function updateAppGlobalStatus(appId: string, isActive: boolean): P
  */
 export async function getAllApps(): Promise<AppIcon[]> {
   return await getApps();
+}
+
+// ============================================================================
+// Web Push 구독 관리
+// ============================================================================
+
+export interface PushSubscriptionData {
+  user_id: string;
+  endpoint: string;
+  p256dh_key: string;
+  auth_key: string;
+  device_name: string; // 예: "Chrome on Windows", "Safari on iPhone"
+  device_type: "desktop" | "mobile" | "tablet"; // 디바이스 타입
+  browser: string; // 예: "Chrome", "Safari", "Edge"
+  os: string; // 예: "Windows", "macOS", "iOS", "Android"
+  created_at: string;
+  last_used: string;
+}
+
+/**
+ * 사용자의 모든 푸시 구독 정보 조회 (다중 디바이스)
+ */
+export async function getPushSubscriptions(userId: string): Promise<PushSubscriptionData[]> {
+  try {
+    console.log("[Data] getPushSubscriptions 시작:", userId);
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    console.log("[Data] 전체 구독 수:", subscriptions.length);
+
+    const userSubscriptions = subscriptions.filter((sub) => sub.user_id === userId);
+    console.log("[Data] 사용자 구독 수:", userSubscriptions.length);
+
+    return userSubscriptions;
+  } catch (error) {
+    console.error("[Data] 구독 조회 오류:", error);
+    return [];
+  }
+}
+
+/**
+ * 특정 endpoint의 푸시 구독 정보 조회
+ */
+export async function getPushSubscriptionByEndpoint(
+  userId: string,
+  endpoint: string
+): Promise<PushSubscriptionData | null> {
+  try {
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    return subscriptions.find((sub) => sub.user_id === userId && sub.endpoint === endpoint) || null;
+  } catch (error) {
+    console.error("[Data] 구독 조회 오류:", error);
+    return null;
+  }
+}
+
+/**
+ * @deprecated 하위 호환성을 위해 유지. getPushSubscriptions 사용 권장
+ */
+export async function getPushSubscription(userId: string): Promise<PushSubscriptionData | null> {
+  const subscriptions = await getPushSubscriptions(userId);
+  return subscriptions[0] || null;
+}
+
+/**
+ * 모든 푸시 구독 정보 조회
+ */
+export async function getAllPushSubscriptions(): Promise<PushSubscriptionData[]> {
+  try {
+    return await readCSV<PushSubscriptionData>("subscriptions.csv");
+  } catch (error) {
+    console.error("Error reading subscriptions:", error);
+    return [];
+  }
+}
+
+/**
+ * 푸시 구독 추가/업데이트 (다중 디바이스 지원)
+ */
+export async function savePushSubscription(
+  userId: string,
+  endpoint: string,
+  p256dhKey: string,
+  authKey: string,
+  deviceName: string,
+  deviceType: "desktop" | "mobile" | "tablet",
+  browser: string,
+  os: string
+): Promise<void> {
+  try {
+    console.log("[Data] savePushSubscription 시작:", {
+      userId,
+      endpoint: endpoint.substring(0, 50) + "...",
+      deviceName,
+    });
+
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    console.log("[Data] 기존 구독 수:", subscriptions.length);
+
+    // user_id + endpoint를 복합키로 사용
+    const existingIndex = subscriptions.findIndex((sub) => sub.user_id === userId && sub.endpoint === endpoint);
+    console.log("[Data] 기존 구독 인덱스:", existingIndex);
+
+    const now = new Date().toISOString();
+    const subscriptionData: PushSubscriptionData = {
+      user_id: userId,
+      endpoint,
+      p256dh_key: p256dhKey,
+      auth_key: authKey,
+      device_name: deviceName,
+      device_type: deviceType,
+      browser,
+      os,
+      created_at: existingIndex >= 0 ? subscriptions[existingIndex].created_at : now,
+      last_used: now,
+    };
+
+    if (existingIndex >= 0) {
+      console.log("[Data] 기존 디바이스 구독 업데이트");
+      subscriptions[existingIndex] = subscriptionData;
+    } else {
+      console.log("[Data] 새 디바이스 구독 추가");
+      subscriptions.push(subscriptionData);
+    }
+
+    console.log("[Data] CSV 쓰기 시작, 총 구독 수:", subscriptions.length);
+    await writeCSV("subscriptions.csv", subscriptions);
+    console.log("[Data] CSV 쓰기 완료!");
+  } catch (error) {
+    console.error("[Data] 구독 저장 오류:", error);
+    throw error;
+  }
+}
+
+/**
+ * 특정 디바이스의 푸시 구독 삭제
+ */
+export async function deletePushSubscription(userId: string, endpoint: string): Promise<void> {
+  try {
+    console.log("[Data] deletePushSubscription:", { userId, endpoint: endpoint.substring(0, 50) + "..." });
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    const filtered = subscriptions.filter((sub) => !(sub.user_id === userId && sub.endpoint === endpoint));
+
+    if (filtered.length === subscriptions.length) {
+      throw new Error("구독 정보를 찾을 수 없습니다.");
+    }
+
+    await writeCSV("subscriptions.csv", filtered);
+    console.log("[Data] 디바이스 구독 삭제 완료");
+  } catch (error) {
+    console.error("[Data] 구독 삭제 오류:", error);
+    throw error;
+  }
+}
+
+/**
+ * 사용자의 모든 디바이스 푸시 구독 삭제
+ */
+export async function deleteAllUserPushSubscriptions(userId: string): Promise<void> {
+  try {
+    console.log("[Data] deleteAllUserPushSubscriptions:", userId);
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    const filtered = subscriptions.filter((sub) => sub.user_id !== userId);
+
+    if (filtered.length === subscriptions.length) {
+      throw new Error("구독 정보를 찾을 수 없습니다.");
+    }
+
+    await writeCSV("subscriptions.csv", filtered);
+  } catch (error) {
+    console.error("Error deleting subscription:", error);
+    throw error;
+  }
+}
+
+/**
+ * endpoint로 푸시 구독 삭제 (만료된 구독 정리용)
+ */
+export async function deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+  try {
+    const subscriptions = await readCSV<PushSubscriptionData>("subscriptions.csv");
+    const filtered = subscriptions.filter((sub) => sub.endpoint !== endpoint);
+
+    if (filtered.length < subscriptions.length) {
+      await writeCSV("subscriptions.csv", filtered);
+    }
+  } catch (error) {
+    console.error("Error deleting subscription by endpoint:", error);
+  }
 }

@@ -4,6 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DailyTaskWithStatus } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
+import { useNotification } from "@/contexts/NotificationContext";
+import {
+  getEncouragementMessage,
+  getLastNotificationThreshold,
+  setLastNotificationThreshold,
+} from "@/lib/dailyTasksNotifications";
 
 interface TodayTaskCardProps {
   userId: string;
@@ -11,12 +17,14 @@ interface TodayTaskCardProps {
 
 export function TodayTaskCard({ userId }: TodayTaskCardProps) {
   const router = useRouter();
+  const { notifyEncouragement } = useNotification();
   const [isExpanded, setIsExpanded] = useState(true);
   const [tasks, setTasks] = useState<DailyTaskWithStatus[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [completedTasks, setCompletedTasks] = useState(0);
   const [completionRate, setCompletionRate] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [encouragementEnabled, setEncouragementEnabled] = useState(true);
 
   useEffect(() => {
     // localStorage에서 접기/펴기 상태 불러오기
@@ -26,15 +34,48 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
     }
 
     loadTodayTasks();
+    loadNotificationSettings();
   }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+      if (result.success && result.data.notifications) {
+        setEncouragementEnabled(result.data.notifications.encouragementEnabled !== false);
+      }
+    } catch (error) {
+      console.error("알림 설정 로드 실패:", error);
+    }
+  };
+
+  const checkAndSendEncouragement = async (completedCount: number, totalCount: number) => {
+    if (!userId || !encouragementEnabled || totalCount === 0) return;
+
+    const completionRate = completedCount / totalCount;
+    const lastThreshold = getLastNotificationThreshold(userId);
+    const message = getEncouragementMessage(completionRate, lastThreshold);
+
+    if (message) {
+      await notifyEncouragement(message.title, message.body);
+      setLastNotificationThreshold(userId, message.threshold);
+      console.log(`✅ 응원 메시지: ${message.title} (완료율: ${Math.floor(completionRate * 100)}%)`);
+    }
+  };
 
   const loadTodayTasks = async () => {
     try {
       const token = cookieUtils.getToken();
-      const today = new Date().toISOString().split("T")[0];
-      const lastAccessDate = localStorage.getItem("lastTaskAccessDate") || today;
+      // 로컬 타임존 기준 오늘 날짜 (UTC 문제 방지)
+      const now = new Date();
+      const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
 
-      const response = await fetch(`/api/daily-tasks/today?date=${today}&lastAccessDate=${lastAccessDate}`, {
+      const response = await fetch(`/api/daily-tasks/today?date=${today}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -45,9 +86,6 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
         setTotalTasks(result.data.totalTasks);
         setCompletedTasks(result.data.completedTasks);
         setCompletionRate(result.data.completionRate);
-
-        // 오늘 날짜 저장
-        localStorage.setItem("lastTaskAccessDate", today);
       }
     } catch (error) {
       console.error("오늘의 할일 로드 실패:", error);
@@ -65,7 +103,11 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
   const toggleTaskCompletion = async (taskId: string) => {
     try {
       const token = cookieUtils.getToken();
-      const today = new Date().toISOString().split("T")[0];
+      // 로컬 타임존 기준 오늘 날짜
+      const now = new Date();
+      const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
 
       const response = await fetch("/api/daily-tasks/today", {
         method: "PATCH",
@@ -85,6 +127,9 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
         );
         setCompletedTasks(result.data.completedTasks);
         setCompletionRate(parseFloat(result.data.completionRate));
+
+        // 응원 메시지 체크
+        await checkAndSendEncouragement(result.data.completedTasks, result.data.totalTasks);
       }
     } catch (error) {
       console.error("할일 상태 변경 실패:", error);

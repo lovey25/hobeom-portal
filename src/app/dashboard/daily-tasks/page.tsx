@@ -4,21 +4,34 @@ import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useNotification } from "@/contexts/NotificationContext";
 import { DailyTask, DailyStat } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import {
+  getEncouragementMessage,
+  getLastNotificationThreshold,
+  setLastNotificationThreshold,
+  shouldSendReminder,
+  getLastReminderTime,
+  setLastReminderTime,
+} from "@/lib/dailyTasksNotifications";
 
 export default function DailyTasksPage() {
   const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
+  const { notifyEncouragement, notifyDailyTasksReminder } = useNotification();
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [stats, setStats] = useState<DailyStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [encouragementEnabled, setEncouragementEnabled] = useState(true);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTimes, setReminderTimes] = useState<string[]>(["09:00", "12:00", "18:00", "21:00"]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -28,7 +41,62 @@ export default function DailyTasksPage() {
   useEffect(() => {
     setPageTitle("오늘의 할일 관리", "매일 해야 할 일들을 관리하고 완료율을 확인하세요");
     loadData();
+    loadNotificationSettings();
   }, [setPageTitle]);
+
+  // 접속 유도 알림 체크 (1분마다)
+  useEffect(() => {
+    if (!user || !reminderEnabled) return;
+
+    const checkReminder = () => {
+      const lastReminderTime = getLastReminderTime(user.id);
+      const reminder = shouldSendReminder(reminderTimes, lastReminderTime);
+
+      if (reminder) {
+        notifyDailyTasksReminder(reminder.title, reminder.body);
+        setLastReminderTime(user.id, reminder.time);
+      }
+    };
+
+    // 초기 체크
+    checkReminder();
+
+    // 1분마다 체크
+    const interval = setInterval(checkReminder, 60000);
+    return () => clearInterval(interval);
+  }, [user, reminderEnabled, reminderTimes, notifyDailyTasksReminder]);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const token = cookieUtils.getToken();
+      const response = await fetch("/api/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+      if (result.success && result.data.notifications) {
+        const notif = result.data.notifications;
+        setEncouragementEnabled(notif.encouragementEnabled !== false);
+        setReminderEnabled(notif.dailyTasksReminderEnabled === true);
+        setReminderTimes(notif.dailyTasksReminderTimes || ["09:00", "12:00", "18:00", "21:00"]);
+      }
+    } catch (error) {
+      console.error("알림 설정 로드 실패:", error);
+    }
+  };
+
+  const checkAndSendEncouragement = async (completedCount: number, totalCount: number) => {
+    if (!user || !encouragementEnabled || totalCount === 0) return;
+
+    const completionRate = completedCount / totalCount;
+    const lastThreshold = getLastNotificationThreshold(user.id);
+    const message = getEncouragementMessage(completionRate, lastThreshold);
+
+    if (message) {
+      await notifyEncouragement(message.title, message.body);
+      setLastNotificationThreshold(user.id, message.threshold);
+      console.log(`✅ 응원 메시지 전송: ${message.title} (완료율: ${Math.floor(completionRate * 100)}%)`);
+    }
+  };
 
   const loadData = async () => {
     try {

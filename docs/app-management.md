@@ -1,67 +1,117 @@
-# 앱 관리 및 활동 로그 기능
+# 앱 관리 기능# 앱 관리 및 활동 로그 기능
 
-## 개요
+사용자별 앱 표시/숨김 및 순서 변경, 관리자의 전역 앱 활성화 기능을 제공합니다.## 개요
 
-사용자별 앱 표시/숨김, 순서 변경, 활동 로그 추적 기능을 제공합니다.
+## 주요 기능사용자별 앱 표시/숨김, 순서 변경, 활동 로그 추적 기능을 제공합니다.
 
-## 🎯 주요 기능
+### 사용자 (모든 역할)## 🎯 주요 기능
 
-### 1. 사용자별 앱 관리
+- **개인 앱 표시/숨김**: 파란색 토글로 본인의 대시보드에서 앱 보이기/숨기기### 1. 사용자별 앱 관리
 
-- ✅ 앱 보이기/숨기기 토글
+- **앱 순서 변경**: 드래그 앤 드롭으로 앱 순서 커스터마이징
+
+- **카테고리별 관리**: 공용/개인/관리자 앱 분리- ✅ 앱 보이기/숨기기 토글
+
 - ✅ 드래그 앤 드롭으로 앱 순서 변경
-- ✅ 카테고리별 관리 (공용/개인/관리자)
+
+### 관리자 전용- ✅ 카테고리별 관리 (공용/개인/관리자)
+
 - ✅ 대시보드에 실시간 반영
 
-### 2. 활동 로그
+- **전역 앱 활성화/비활성화**: 빨간색 토글로 모든 사용자에 대한 앱 활성화 상태 관리
 
-- ✅ 사용자 활동 자동 기록
+- **비활성화된 앱**: 관리자만 설정 페이지에서 볼 수 있음### 2. 활동 로그
+
+## 데이터 구조- ✅ 사용자 활동 자동 기록
+
 - ✅ 최근 활동 5개 표시
-- ✅ 시간 표시 (방금 전, N분 전, N시간 전, N일 전)
+
+### apps.csv- ✅ 시간 표시 (방금 전, N분 전, N시간 전, N일 전)
+
 - ✅ 활동 유형별 색상 구분
 
-### 3. 자동 초기화
+```csv
+
+id,name,description,icon,href,require_auth,category,order,is_active### 3. 자동 초기화
+
+```
 
 - ✅ 신규 회원가입 시 모든 앱 자동 활성화
-- ✅ 기본 순서로 설정
 
-## 📁 데이터 구조
+- `is_active`: 전역 활성화 상태 (관리자만 변경)- ✅ 기본 순서로 설정
 
-### user-app-settings.csv
+### user-app-settings.csv## 📁 데이터 구조
 
-사용자별 앱 설정 저장
+````csv### user-app-settings.csv
 
-```csv
 id,user_id,app_id,is_visible,custom_order,category
-1,1,1,true,1,public
+
+```사용자별 앱 설정 저장
+
+
+
+- `is_visible`: 개인 표시 설정 (각 사용자가 변경)```csv
+
+id,user_id,app_id,is_visible,custom_order,category
+
+## 우선순위1,1,1,true,1,public
+
 2,1,5,true,1,dashboard
-3,1,6,false,2,dashboard
-```
+
+앱 표시 조건:3,1,6,false,2,dashboard
+
+1. `apps.csv`의 `is_active === true` (관리자가 전역 활성화)```
+
+2. AND `user-app-settings.csv`의 `is_visible === true` (사용자가 개인 활성화)
 
 **필드 설명:**
 
+## 활동 로그
+
 - `id`: 고유 ID
-- `user_id`: 사용자 ID
+
+사용자 활동을 자동으로 기록하여 추적합니다.- `user_id`: 사용자 ID
+
 - `app_id`: 앱 ID
-- `is_visible`: 표시 여부 (true/false)
+
+### activity-logs.csv- `is_visible`: 표시 여부 (true/false)
+
 - `custom_order`: 사용자 지정 순서
-- `category`: 앱 카테고리 (public/dashboard/admin)
 
-### activity-logs.csv
+```csv- `category`: 앱 카테고리 (public/dashboard/admin)
 
-사용자 활동 로그 저장
+id,user_id,app_id,app_name,action,timestamp
+
+```### activity-logs.csv
+
+
+
+- 최근 활동 5개 표시사용자 활동 로그 저장
+
+- 시간 표시: 방금 전, N분 전, N시간 전, N일 전
 
 ```csv
-id,user_id,action_type,action_description,created_at,app_id
+
+## 사용 방법id,user_id,action_type,action_description,created_at,app_id
+
 1,1,task_complete,할일 3개를 완료했습니다,2024-10-12T06:00:00.000Z,5
-2,1,file_upload,새로운 파일을 업로드했습니다,2024-10-12T08:00:00.000Z,8
-```
 
-**필드 설명:**
+1. 설정 → 📱 앱 관리 탭2,1,file_upload,새로운 파일을 업로드했습니다,2024-10-12T08:00:00.000Z,8
 
-- `id`: 고유 ID
+2. 토글 스위치로 앱 표시/숨김```
+
+3. (관리자) 빨간색 토글로 전역 설정
+
+4. 드래그로 앱 순서 변경**필드 설명:**
+
+
+
+## 상세 문서- `id`: 고유 ID
+
 - `user_id`: 사용자 ID
-- `action_type`: 활동 유형 (task_complete, file_upload, data_analysis, travel_prep, profile_update 등)
+
+- `/src/app/dashboard/settings/README.md` - 설정 앱 기술 문서- `action_type`: 활동 유형 (task_complete, file_upload, data_analysis, travel_prep, profile_update 등)
+
 - `action_description`: 활동 설명
 - `created_at`: 활동 시간 (ISO 8601)
 - `app_id`: 관련 앱 ID (선택)
@@ -91,7 +141,7 @@ id,user_id,action_type,action_description,created_at,app_id
     }
   ]
 }
-```
+````
 
 #### PUT /api/user-apps
 

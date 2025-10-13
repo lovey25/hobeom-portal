@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppIconGrid } from "@/components/AppIconGrid";
 import { TodayTaskCard } from "@/components/TodayTaskCard";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
@@ -181,6 +182,9 @@ export default function DashboardPage() {
               <p className="text-blue-100">오늘도 좋은 하루 되세요!</p>
             </div>
           </div>
+
+          {/* Notification Permission Banner */}
+          <NotificationPermissionBanner />
 
           {/* Today Tasks Card */}
           <div className="mb-8">{user && <TodayTaskCard userId={user.id} />}</div>

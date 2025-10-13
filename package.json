@@ -3,20 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "concurrently \"npm run dev:next\" \"npm run dev:push\" --names \"NEXT,PUSH\" --prefix-colors \"cyan,magenta\"",
+    "dev:next": "next dev --turbopack",
+    "dev:push": "node scripts/push-scheduler.js",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate-icons": "node scripts/generate-icons.js",
+    "push-scheduler": "node scripts/push-scheduler.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "next": "15.5.4",
+    "node-cron": "^4.2.1",
     "papaparse": "^5.5.3",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -28,6 +35,8 @@
     "@types/papaparse": "^5.3.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "tailwindcss": "^4",
