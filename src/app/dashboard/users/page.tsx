@@ -93,6 +93,42 @@ export default function UsersPage() {
     }
   };
 
+  const handlePasswordReset = async (userId: string) => {
+    if (!confirm("정말로 이 사용자의 비밀번호를 초기화하시겠습니까? 기본 비밀번호 'password'로 설정됩니다.")) return;
+
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("hobeom-portal-token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        alert("인증 토큰이 없습니다.");
+        return;
+      }
+
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ passwordReset: true }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("비밀번호가 초기화되었습니다. 기본 비밀번호: password");
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      alert("비밀번호 초기화 중 오류가 발생했습니다.");
+      console.error("Failed to reset password:", err);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("정말로 이 사용자를 삭제하시겠습니까?")) return;
 
@@ -165,10 +201,10 @@ export default function UsersPage() {
                         가입일
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        마지막 로그인
+                        마지막 접속
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        작업
+                        역할
                       </th>
                     </tr>
                   </thead>
@@ -195,18 +231,26 @@ export default function UsersPage() {
                           {new Date(user.createdAt).toLocaleDateString("ko-KR")}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString("ko-KR") : "로그인 기록 없음"}
+                          {user.lastAccess
+                            ? `${new Date(user.lastAccess).toLocaleString("ko-KR")} (로컬)`
+                            : "접속 기록 없음"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
                             <select
                               value={user.role}
                               onChange={(e) => handleRoleChange(user.id, e.target.value as "admin" | "user")}
-                              className="text-xs border border-gray-300 rounded px-2 py-1"
+                              className="text-xs text-gray-900 border border-gray-300 rounded px-2 py-1"
                             >
                               <option value="user">사용자</option>
                               <option value="admin">관리자</option>
                             </select>
+                            <Button
+                              onClick={() => handlePasswordReset(user.id)}
+                              className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1"
+                            >
+                              초기화
+                            </Button>
                             <Button
                               onClick={() => handleDeleteUser(user.id)}
                               className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1"

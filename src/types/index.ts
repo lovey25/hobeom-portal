@@ -3,10 +3,11 @@ export interface User {
   username: string;
   email: string;
   name: string;
+  passwordHash: string;
   role: "admin" | "user";
   createdAt: string;
-  lastLogin?: string;
-  passwordHash?: string;
+  lastLogin?: string;      // 로그인 시점
+  lastAccess?: string;     // API 호출 시점 (할일 리셋 등에 사용)
 }
 
 export interface AuthResponse {

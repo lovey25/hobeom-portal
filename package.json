@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:next\" \"npm run dev:push\" --names \"NEXT,PUSH\" --prefix-colors \"cyan,magenta\"",
     "dev:next": "next dev --turbopack",
-    "dev:push": "node scripts/push-scheduler.js",
+    "dev:push": "nodemon scripts/push-scheduler.js",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -39,6 +39,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "nodemon": "^3.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

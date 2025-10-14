@@ -78,12 +78,12 @@ function shouldSendReminderNow(reminderTimes) {
   const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   return reminderTimes.some((time) => {
-    // 정확한 시간 또는 5분 이내
+    // 정확한 시간 또는 10분 이내
     const [hour, min] = time.split(":").map(Number);
     const reminderMinutes = hour * 60 + min;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    return currentMinutes >= reminderMinutes && currentMinutes <= reminderMinutes + 5;
+    return currentMinutes >= reminderMinutes && currentMinutes <= reminderMinutes + 10;
   });
 }
 
@@ -105,7 +105,7 @@ function getDaysUntilTrip(travelDate) {
 function getReminderMessage(hour) {
   const messages = {
     9: { title: "☀️ 좋은 아침이에요!", body: "오늘의 할일을 확인해보세요" },
-    12: { title: "🍽️ 점심시간이에요", body: "오늘의 할일 진행 상황을 확인해보세요" },
+    12: { title: "🍽️ 점심시간입니다", body: "오늘의 할일 진행 상황을 확인해보세요" },
     18: { title: "🌆 저녁이 되었어요", body: "오늘의 할일을 마무리할 시간입니다" },
     21: { title: "🌙 하루를 마무리하세요", body: "오늘 하루를 정리하고 내일을 준비해보세요" },
   };
@@ -173,12 +173,21 @@ async function checkAndSendNotifications() {
       };
 
       // 알림 설정 파싱
-      let notificationSettings;
-      try {
-        notificationSettings = JSON.parse(settings.notifications || "{}");
-      } catch {
-        notificationSettings = {};
-      }
+      const notificationRows = userSettings.filter((s) => s.category === "notifications" && s.user_id === userId);
+      const notificationSettings = {};
+      notificationRows.forEach((row) => {
+        if (row.key === "dailyTasksReminderTimes") {
+          try {
+            notificationSettings[row.key] = JSON.parse(row.value);
+          } catch (error) {
+            notificationSettings[row.key] = [];
+          }
+        } else if (row.key === "travelNotificationDays") {
+          notificationSettings[row.key] = parseInt(row.value) || 3;
+        } else {
+          notificationSettings[row.key] = row.value === "true";
+        }
+      });
 
       // === 리마인더 알림 체크 ===
       if (notificationSettings.dailyTasksReminderEnabled) {
@@ -253,7 +262,7 @@ async function checkAndSendNotifications() {
 // 스케줄러 시작
 console.log("🚀 호범 포털 푸시 알림 스케줄러 시작");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-console.log(`⏰ 매 분마다 실행됩니다`);
+console.log(`⏰ 매 10 분마다 실행됩니다`);
 console.log(`📡 VAPID Public Key: ${vapidPublicKey.substring(0, 20)}...`);
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
@@ -261,7 +270,7 @@ console.log("━━━━━━━━━━━━━━━━━━━━━━�
 checkAndSendNotifications();
 
 // 매 분마다 실행 (*/1 = 1분마다)
-cron.schedule("* * * * *", () => {
+cron.schedule("*/10 * * * *", () => {
   checkAndSendNotifications();
 });
 

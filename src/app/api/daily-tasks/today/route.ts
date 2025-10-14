@@ -7,6 +7,7 @@ import {
   saveDailyStats,
   addActivityLog,
   getUsers,
+  updateUserLastAccess,
 } from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
@@ -36,18 +37,27 @@ export async function GET(request: NextRequest) {
       .split("T")[0];
     const date = searchParams.get("date") || localDate;
 
-    // 서버 기반: users.csv의 lastLogin으로 마지막 접속일 확인
+    // 서버 기반: users.csv의 lastAccess로 마지막 접속일 확인
     const users = await getUsers();
     const user = users.find((u) => u.id === decoded.id);
-    const lastLoginDate = user?.lastLogin?.split("T")[0]; // "2024-10-11T14:30:00Z" → "2024-10-11"
-
-    console.log("User last login date:", lastLoginDate, `date=${date}`);
-
-    // 마지막 로그인 날짜와 오늘 날짜가 다르면 리셋 및 완료율 기록
-    if (lastLoginDate && lastLoginDate !== date) {
-      await resetDailyTasksForUser(decoded.id, lastLoginDate);
-      console.log(`✅ 할일 자동 리셋: ${lastLoginDate} → ${date} (사용자: ${decoded.username})`);
+    
+    // UTC 타임스탬프를 로컬 날짜로 변환
+    let lastAccessDate: string | undefined;
+    if (user?.lastAccess) {
+      const lastAccessUTC = new Date(user.lastAccess);
+      lastAccessDate = new Date(lastAccessUTC.getTime() - lastAccessUTC.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
     }
+
+    // 마지막 접속 날짜와 오늘 날짜가 다르면 리셋 및 완료율 기록
+    if (lastAccessDate && lastAccessDate !== date) {
+      await resetDailyTasksForUser(decoded.id, lastAccessDate);
+      console.log(`✅ 할일 자동 리셋: ${lastAccessDate} → ${date} (사용자: ${decoded.username})`);
+    }
+
+    // API 호출 시마다 최종 접속 시간 업데이트
+    await updateUserLastAccess(decoded.id);
 
     // 오늘의 할일 목록
     const tasks = await getDailyTasks(decoded.id);

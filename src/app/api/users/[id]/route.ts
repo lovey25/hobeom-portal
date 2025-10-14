@@ -24,8 +24,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json(response, { status: 403 });
     }
 
-    const { role } = await request.json();
+    const { role, passwordReset } = await request.json();
     const { id: userId } = await params;
+
+    if (passwordReset) {
+      // 비밀번호 초기화: 기본 비밀번호 "password"로 설정
+      const bcrypt = require("bcryptjs");
+      const hashedPassword = await bcrypt.hash("password", 10);
+      await updateUser(userId, { passwordHash: hashedPassword });
+
+      const response: ApiResponse = {
+        success: true,
+        message: "비밀번호가 초기화되었습니다. 기본 비밀번호: password",
+      };
+      return NextResponse.json(response);
+    }
 
     if (!role || !["admin", "user"].includes(role)) {
       const response: ApiResponse = {

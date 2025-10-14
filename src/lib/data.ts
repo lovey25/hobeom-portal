@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import csvParser from "csv-parser";
+import bcrypt from "bcryptjs";
 import { User, AppIcon, TravelTypeTemplate, TravelItem, Bag, TripList, TripItem, BagStats } from "@/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -37,6 +38,32 @@ export async function readCSV<T>(filename: string): Promise<T[]> {
   });
 }
 
+/**
+ * CSV 값을 RFC 4180 표준에 따라 이스케이프
+ * - 쉼표, 따옴표, 개행이 있으면 따옴표로 감싸기
+ * - 따옴표는 ""로 이스케이프
+ */
+function escapeCSVValue(value: any): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  const stringValue = String(value);
+
+  // 쉼표, 따옴표, 개행 문자가 있으면 이스케이프 필요
+  if (
+    stringValue.includes(",") ||
+    stringValue.includes('"') ||
+    stringValue.includes("\n") ||
+    stringValue.includes("\r")
+  ) {
+    // 따옴표를 ""로 이스케이프하고 전체를 따옴표로 감싸기
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+
+  return stringValue;
+}
+
 export async function writeCSV<T extends Record<string, any>>(filename: string, data: T[]): Promise<void> {
   const filepath = path.join(DATA_DIR, filename);
 
@@ -45,11 +72,7 @@ export async function writeCSV<T extends Record<string, any>>(filename: string, 
   }
 
   const headers = Object.keys(data[0]).join(",");
-  const rows = data.map((row) =>
-    Object.values(row)
-      .map((value) => (typeof value === "string" && value.includes(",") ? `"${value}"` : String(value)))
-      .join(",")
-  );
+  const rows = data.map((row) => Object.values(row).map(escapeCSVValue).join(","));
 
   const csvContent = [headers, ...rows].join("\n");
 
@@ -57,22 +80,34 @@ export async function writeCSV<T extends Record<string, any>>(filename: string, 
 }
 
 export async function getUsers(): Promise<User[]> {
-  try {
-    const rawUsers = await readCSV<any>("users.csv");
-    return rawUsers.map((user) => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      role: user.role as "admin" | "user",
-      createdAt: user.created_at,
-      lastLogin: user.last_login || undefined,
-      passwordHash: user.password_hash, // 내부적으로만 사용
-    }));
-  } catch (error) {
-    console.error("Error reading users:", error);
-    return [];
-  }
+  const rawUsers = await readCSV("users.csv");
+
+  return rawUsers.map((user: any) => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    passwordHash: user.passwordHash || user.password_hash,
+    role: (user.role as "admin" | "user") || "user",
+    createdAt: user.createdAt || user.created_at,
+    lastLogin: user.lastLogin || user.last_login,
+    lastAccess: user.lastAccess || user.last_access,
+  }));
+}
+
+export async function getUsersWithoutPassword(): Promise<Omit<User, "passwordHash">[]> {
+  const rawUsers = await readCSV("users.csv");
+
+  return rawUsers.map((user: any) => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    role: (user.role as "admin" | "user") || "user",
+    createdAt: user.createdAt || user.created_at,
+    lastLogin: user.lastLogin || user.last_login,
+    lastAccess: user.lastAccess || user.last_access,
+  }));
 }
 
 export async function getUserByUsername(username: string): Promise<(User & { passwordHash: string }) | null> {
@@ -88,9 +123,10 @@ export async function getUserByUsername(username: string): Promise<(User & { pas
       email: user.email,
       name: user.name,
       role: user.role as "admin" | "user",
-      createdAt: user.created_at,
-      lastLogin: user.last_login || undefined,
-      passwordHash: user.password_hash,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin || undefined,
+      lastAccess: user.lastAccess || undefined,
+      passwordHash: user.passwordHash,
     };
   } catch (error) {
     console.error("Error reading user:", error);
@@ -132,13 +168,31 @@ export async function getAllUsers(): Promise<User[]> {
       email: user.email,
       name: user.name,
       role: user.role as "admin" | "user",
-      createdAt: user.created_at,
-      lastLogin: user.last_login || undefined,
+      passwordHash: user.passwordHash,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin || undefined,
+      lastAccess: user.lastAccess || undefined,
     }));
   } catch (error) {
     console.error("Error reading all users:", error);
     return [];
   }
+}
+
+export async function getAllUsersWithStats(): Promise<User[]> {
+  const rawUsers = await readCSV("users.csv");
+
+  return rawUsers.map((user: any) => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    passwordHash: user.passwordHash || user.password_hash,
+    role: (user.role as "admin" | "user") || "user",
+    createdAt: user.createdAt || user.created_at,
+    lastLogin: user.lastLogin || user.last_login,
+    lastAccess: user.lastAccess || user.last_access,
+  }));
 }
 
 export async function updateUser(userId: string, updates: Partial<User>): Promise<void> {
@@ -159,6 +213,9 @@ export async function updateUser(userId: string, updates: Partial<User>): Promis
     }
     if (updates.email) {
       rawUsers[userIndex].email = updates.email;
+    }
+    if (updates.passwordHash) {
+      rawUsers[userIndex].password_hash = updates.passwordHash;
     }
 
     await writeCSV("users.csv", rawUsers);
@@ -197,9 +254,10 @@ export async function getUserByEmail(email: string): Promise<(User & { passwordH
       email: user.email,
       name: user.name,
       role: user.role as "admin" | "user",
-      createdAt: user.created_at,
-      lastLogin: user.last_login || undefined,
-      passwordHash: user.password_hash,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin || undefined,
+      lastAccess: user.lastAccess || undefined,
+      passwordHash: user.passwordHash,
     };
   } catch (error) {
     console.error("Error reading user by email:", error);
@@ -211,40 +269,37 @@ export async function createUser(userData: {
   username: string;
   email: string;
   name: string;
-  passwordHash: string;
-  role: "admin" | "user";
+  password: string;
+  role?: "admin" | "user";
 }): Promise<User> {
   try {
     const rawUsers = await readCSV<any>("users.csv");
 
     // 새 ID 생성 (기존 ID들 중 최대값 + 1)
     const maxId = rawUsers.reduce((max, user) => Math.max(max, parseInt(user.id) || 0), 0);
-    const newId = (maxId + 1).toString();
+    const userId = (maxId + 1).toString();
 
     const now = new Date().toISOString();
 
-    const newRawUser = {
-      id: newId,
+    // 비밀번호 해시화
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    const newUser: User = {
+      id: userId,
       username: userData.username,
       email: userData.email,
       name: userData.name,
-      password_hash: userData.passwordHash,
-      role: userData.role,
-      created_at: now,
-      last_login: "",
+      passwordHash: hashedPassword,
+      role: userData.role || "user",
+      createdAt: now,
+      lastLogin: undefined,
+      lastAccess: undefined,
     };
 
-    rawUsers.push(newRawUser);
+    rawUsers.push(newUser);
     await writeCSV("users.csv", rawUsers);
 
-    return {
-      id: newId,
-      username: userData.username,
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      createdAt: now,
-    };
+    return newUser;
   } catch (error) {
     console.error("Error creating user:", error);
     throw error;
@@ -260,13 +315,26 @@ export async function updateUserLastLogin(userId: string): Promise<void> {
       throw new Error("사용자를 찾을 수 없습니다.");
     }
 
-    // 현재 시간으로 last_login 업데이트
-    rawUsers[userIndex].last_login = new Date().toISOString();
+    // 현재 시간으로 lastLogin 업데이트
+    rawUsers[userIndex].lastLogin = new Date().toISOString();
 
     await writeCSV("users.csv", rawUsers);
   } catch (error) {
     console.error("Error updating user last login:", error);
     throw error;
+  }
+}
+
+/**
+ * 사용자 최종 접속 시간 업데이트 (API 호출 시마다)
+ */
+export async function updateUserLastAccess(userId: string): Promise<void> {
+  const users = await getUsers();
+  const user = users.find((u) => u.id === userId);
+
+  if (user) {
+    user.lastAccess = new Date().toISOString();
+    await writeCSV<User>("users.csv", users);
   }
 }
 
@@ -1415,6 +1483,13 @@ export async function getUserSettings(userId: string): Promise<any> {
         if (value === "true") parsedValue = true;
         else if (value === "false") parsedValue = false;
         else if (!isNaN(Number(value))) parsedValue = Number(value);
+        else if (key === "dailyTasksReminderTimes") {
+          try {
+            parsedValue = JSON.parse(value);
+          } catch {
+            parsedValue = ["09:00", "12:00", "18:00", "21:00"];
+          }
+        }
 
         (defaultSettings[category] as any)[key] = parsedValue;
       }
@@ -1448,12 +1523,7 @@ export async function getUserSettings(userId: string): Promise<any> {
 /**
  * 사용자 설정 업데이트
  */
-export async function updateUserSetting(
-  userId: string,
-  category: string,
-  key: string,
-  value: string | number | boolean
-): Promise<void> {
+export async function updateUserSetting(userId: string, category: string, key: string, value: any): Promise<void> {
   try {
     const rawSettings = await readCSV<any>("user-settings.csv");
 
@@ -1462,7 +1532,8 @@ export async function updateUserSetting(
       (s) => s.user_id === userId && s.category === category && s.key === key
     );
 
-    const valueStr = String(value);
+    // 배열이나 객체는 JSON.stringify, 그 외는 String()
+    const valueStr = Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
 
     if (existingIndex !== -1) {
       // 업데이트

@@ -171,16 +171,16 @@ npm run push-scheduler
 
 [CHANGELOG.md](CHANGELOG.md) 참고
 
-## 🤝 기여
-
-새로운 앱이나 기능 개선을 환영합니다!
-
 ## 🔒 보안
 
 - JWT 토큰 기반 인증
 - bcrypt 비밀번호 해싱
 - 역할 기반 접근 제어 (admin/user)
 - 보호된 라우트 미들웨어
+
+## 개선예정
+
+- CSV 읽기 캐싱 및 쓰기 큐잉으로 성능 최적화
 
 ## � 라이센스
 
