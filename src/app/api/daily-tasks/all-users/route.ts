@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
+    // 한국 시간 기준 날짜
+    const today = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+    const kstDate = new Date(today.getTime() + kstOffset);
+    const date = searchParams.get("date") || kstDate.toISOString().split("T")[0];
 
     const allStatus = await getAllUsersDailyStatus(date);
 

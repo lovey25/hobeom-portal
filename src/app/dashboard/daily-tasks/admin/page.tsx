@@ -7,9 +7,17 @@ import { UserDailyStatus, DailyTask } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
 import { Card } from "@/components/ui/Card";
 
+// 한국 시간으로 오늘 날짜 계산
+const getTodayKST = (): string => {
+  const now = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+  const kstTime = new Date(now.getTime() + kstOffset);
+  return kstTime.toISOString().split("T")[0];
+};
+
 export default function DailyTasksAdminPage() {
   const { setPageTitle } = usePageTitle();
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getTodayKST());
   const [usersStatus, setUsersStatus] = useState<UserDailyStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
@@ -193,7 +201,7 @@ export default function DailyTasksAdminPage() {
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
               <button
-                onClick={() => setDate(new Date().toISOString().split("T")[0])}
+                onClick={() => setDate(getTodayKST())}
                 className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm font-medium"
               >
                 오늘

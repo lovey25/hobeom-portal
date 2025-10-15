@@ -3,7 +3,7 @@
 /**
  * 백그라운드 푸시 알림 스케줄러
  *
- * 매 분마다 실행되어:
+ * 매 10분마다 실행되어:
  * 1. 리마인더 시간 체크 (09:00, 12:00, 18:00, 21:00 등)
  * 2. 여행 준비 알림 체크 (D-day 기준)
  * 3. 해당 사용자들에게 푸시 알림 전송
@@ -75,16 +75,23 @@ async function sendPush(subscription, payload) {
 // 리마인더 시간 체크
 function shouldSendReminderNow(reminderTimes) {
   const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  return reminderTimes.some((time) => {
+  // 반복해서 가장 먼저 매칭되는 reminder time 문자열(HH:MM)을 반환하거나 null 반환
+  for (const time of reminderTimes) {
+    if (!time || typeof time !== "string") continue;
+    const parts = time.split(":").map(Number);
+    if (parts.length !== 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) continue;
+
+    const reminderMinutes = parts[0] * 60 + parts[1];
+
     // 정확한 시간 또는 10분 이내
-    const [hour, min] = time.split(":").map(Number);
-    const reminderMinutes = hour * 60 + min;
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    if (currentMinutes >= reminderMinutes && currentMinutes <= reminderMinutes + 10) {
+      return `${String(parts[0]).padStart(2, "0")}:${String(parts[1]).padStart(2, "0")}`;
+    }
+  }
 
-    return currentMinutes >= reminderMinutes && currentMinutes <= reminderMinutes + 10;
-  });
+  return null;
 }
 
 // 여행 D-day 계산
@@ -193,12 +200,19 @@ async function checkAndSendNotifications() {
       if (notificationSettings.dailyTasksReminderEnabled) {
         const reminderTimes = notificationSettings.dailyTasksReminderTimes || [];
 
-        if (reminderTimes.length > 0 && shouldSendReminderNow(reminderTimes)) {
-          // 오늘 이미 보냈는지 확인
-          if (!wasNotifiedToday(userId, `reminder-${currentHour}`)) {
-            const message = getReminderMessage(currentHour);
+        // 변경: 매칭된 시간을 얻음 (예: "09:00")
+        // const matchedReminderTime = shouldSendReminderNow(reminderTimes);
+        const matchedReminderTime = "08:00";
 
-            console.log(`📢 리마인더 전송: ${userId} - ${message.title}`);
+        if (reminderTimes.length > 0 && matchedReminderTime) {
+          // 오늘 이미 보냈는지 확인 (시간까지 포함한 고유 키 사용)
+          const notifyKey = `reminder-${matchedReminderTime}`; // e.g. reminder-09:00
+
+          if (!wasNotifiedToday(userId, notifyKey)) {
+            const hour = Number(matchedReminderTime.split(":")[0]);
+            const message = getReminderMessage(hour);
+
+            console.log(`📢 리마인더 전송: ${userId} - ${matchedReminderTime} - ${message.title}`);
 
             const result = await sendPush(subscription, {
               title: message.title,
@@ -206,11 +220,12 @@ async function checkAndSendNotifications() {
               data: {
                 url: "/dashboard/daily-tasks",
                 type: "daily-tasks-reminder",
+                scheduledAt: matchedReminderTime,
               },
             });
 
             if (result.success) {
-              markAsNotified(userId, `reminder-${currentHour}`);
+              markAsNotified(userId, notifyKey);
               console.log(`   ✅ 전송 성공`);
             } else {
               console.log(`   ❌ 전송 실패: ${result.error}`);

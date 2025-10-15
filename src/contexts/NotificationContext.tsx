@@ -15,6 +15,9 @@ interface NotificationContextType {
   // 사용자 설정 (향후 settings에서 가져올 수 있음)
   isEnabled: boolean;
   setIsEnabled: (enabled: boolean) => void;
+  // 푸시 구독
+  subscribeToPush: () => Promise<boolean>;
+  unsubscribeFromPush: () => Promise<boolean>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -43,16 +46,142 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [isAuthenticated, user]);
 
-  // 설정 변경 시 로컬 스토리지에 저장
-  const handleSetIsEnabled = useCallback(
-    (enabled: boolean) => {
-      setIsEnabled(enabled);
-      if (user) {
-        localStorage.setItem(`notification-enabled-${user.id}`, enabled.toString());
+  // 푸시 구독
+  const subscribeToPush = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("[Push] 구독 시작");
+
+      // 1. 지원 확인
+      if (!isSupported) {
+        console.warn("푸시 알림이 지원되지 않습니다.");
+        return false;
       }
-    },
-    [user]
-  );
+
+      // 2. 권한 확인
+      if (permission !== "granted") {
+        console.warn("알림 권한이 필요합니다.");
+        return false;
+      }
+
+      // 3. Service Worker 확인
+      if (!("serviceWorker" in navigator)) {
+        console.warn("Service Worker가 지원되지 않습니다.");
+        return false;
+      }
+
+      // 4. VAPID 공개키 확인
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.warn("VAPID 공개키가 설정되지 않았습니다.");
+        return false;
+      }
+
+      // 5. Service Worker 준비 대기
+      const registration = await navigator.serviceWorker.ready;
+      console.log("[Push] Service Worker 준비됨");
+
+      // 6. 기존 구독 확인 및 해제
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log("[Push] 기존 구독 존재, 해제 중...");
+        await existingSubscription.unsubscribe();
+      }
+
+      // 7. 새 구독 생성
+      console.log("[Push] 새 구독 생성 중...");
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidPublicKey,
+      });
+      console.log("[Push] 구독 생성됨:", subscription.endpoint);
+
+      // 8. 서버에 전송 (인증 필요)
+      if (!user || !isAuthenticated) {
+        console.warn("사용자 인증이 필요합니다.");
+        return false;
+      }
+
+      const token = localStorage.getItem("hobeom-portal-token") || "";
+      const response = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+
+      const result = await response.json();
+      console.log("[Push] 서버 응답:", result);
+
+      return result.success;
+    } catch (error) {
+      console.error("[Push] 구독 오류:", error);
+      return false;
+    }
+  }, [isSupported, permission, user, isAuthenticated]);
+
+  // 푸시 구독 해제
+  const unsubscribeFromPush = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("[Push] 구독 해제 시작");
+
+      if (!("serviceWorker" in navigator)) {
+        console.warn("Service Worker가 지원되지 않습니다.");
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        await subscription.unsubscribe();
+        console.log("[Push] 구독 해제됨");
+
+        // 서버에 알림
+        if (user && isAuthenticated) {
+          const token = localStorage.getItem("hobeom-portal-token") || "";
+          await fetch("/api/push/unsubscribe", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+          });
+        }
+
+        return true;
+      } else {
+        console.log("[Push] 구독이 존재하지 않습니다.");
+        return true;
+      }
+    } catch (error) {
+      console.error("[Push] 구독 해제 오류:", error);
+      return false;
+    }
+  }, [user, isAuthenticated]);
+
+  // 권한 변경 시 자동 구독 시도
+  useEffect(() => {
+    if (isSupported && permission === "granted" && isAuthenticated && user && isEnabled) {
+      // 잠시 후에 구독 시도 (Service Worker가 완전히 등록될 시간을 줌)
+      const timer = setTimeout(async () => {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const existingSubscription = await registration.pushManager.getSubscription();
+          if (!existingSubscription) {
+            console.log("[Push] 권한 부여됨, 자동 구독 시도");
+            await subscribeToPush();
+          }
+        } catch (error) {
+          console.error("[Push] 자동 구독 실패:", error);
+        }
+      }, 2000); // 2초 후 시도
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSupported, permission, isAuthenticated, user, isEnabled, subscribeToPush]);
 
   // 권한 요청
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
@@ -190,7 +319,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         notifyEncouragement,
         notifyDailyTasksReminder,
         isEnabled,
-        setIsEnabled: handleSetIsEnabled,
+        setIsEnabled,
+        subscribeToPush,
+        unsubscribeFromPush,
       }}
     >
       {children}

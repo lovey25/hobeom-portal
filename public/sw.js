@@ -54,16 +54,37 @@ self.addEventListener("notificationclose", (event) => {
 
 // Push 이벤트 (Web Push API)
 self.addEventListener("push", (event) => {
-  console.log("[SW] Push notification received");
+  console.log("[SW] Push notification received at", new Date().toISOString());
+
+  // 알림 권한 확인
+  if (Notification.permission !== "granted") {
+    console.warn("[SW] Notification permission not granted:", Notification.permission);
+    return;
+  }
 
   if (!event.data) {
-    console.log("[SW] Push event but no data");
+    console.log("[SW] Push event but no data - showing default notification");
+    event.waitUntil(
+      self.registration
+        .showNotification("호범 포털", {
+          body: "새로운 알림이 있습니다",
+          icon: "/icon-192x192.png",
+          badge: "/badge-72x72.png",
+          requireInteraction: true, // 사용자가 반드시 확인하도록
+        })
+        .then(() => {
+          console.log("[SW] Default notification shown successfully");
+        })
+        .catch((error) => {
+          console.error("[SW] Failed to show default notification:", error);
+        })
+    );
     return;
   }
 
   try {
     const payload = event.data.json();
-    console.log("[SW] Push payload:", payload);
+    console.log("[SW] Push payload received:", payload);
 
     const options = {
       body: payload.body || "새로운 알림이 있습니다",
@@ -71,27 +92,44 @@ self.addEventListener("push", (event) => {
       badge: payload.badge || "/badge-72x72.png",
       data: payload.data || {},
       tag: payload.tag || `${NOTIFICATION_TAG_PREFIX}${payload.data?.type || "push"}-${Date.now()}`,
-      requireInteraction: payload.requireInteraction || false,
+      requireInteraction: true, // 사용자가 반드시 확인하도록 강제
       silent: payload.silent || false,
       vibrate: payload.vibrate || [200, 100, 200], // 진동 패턴
       timestamp: Date.now(),
     };
 
+    console.log("[SW] Showing notification with options:", options);
+
     event.waitUntil(
-      self.registration.showNotification(payload.title || "호범 포털", options).then(() => {
-        console.log("[SW] Push notification shown successfully");
-      })
+      self.registration
+        .showNotification(payload.title || "호범 포털", options)
+        .then(() => {
+          console.log("[SW] Push notification shown successfully at", new Date().toISOString());
+        })
+        .catch((error) => {
+          console.error("[SW] Failed to show notification:", error);
+          // 권한 재확인
+          console.log("[SW] Current permission status:", Notification.permission);
+        })
     );
   } catch (error) {
     console.error("[SW] Error parsing push data:", error);
 
     // 파싱 실패 시에도 기본 알림 표시
     event.waitUntil(
-      self.registration.showNotification("호범 포털", {
-        body: "새로운 알림이 있습니다",
-        icon: "/icon-192x192.png",
-        badge: "/badge-72x72.png",
-      })
+      self.registration
+        .showNotification("호범 포털", {
+          body: "새로운 알림이 있습니다",
+          icon: "/icon-192x192.png",
+          badge: "/badge-72x72.png",
+          requireInteraction: true,
+        })
+        .then(() => {
+          console.log("[SW] Fallback notification shown successfully");
+        })
+        .catch((error) => {
+          console.error("[SW] Failed to show fallback notification:", error);
+        })
     );
   }
 });

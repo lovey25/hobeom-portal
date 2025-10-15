@@ -5,9 +5,10 @@ import { useNotification } from "@/contexts/NotificationContext";
 import { Button } from "./ui/Button";
 
 export function NotificationPermissionBanner() {
-  const { permission, isSupported, requestPermission } = useNotification();
+  const { permission, isSupported, requestPermission, subscribeToPush } = useNotification();
   const [isVisible, setIsVisible] = React.useState(true);
   const [isRequesting, setIsRequesting] = React.useState(false);
+  const [isSubscribing, setIsSubscribing] = React.useState(false);
 
   // 권한이 이미 부여되었거나 거부되었거나 지원되지 않으면 배너를 숨김
   if (!isSupported || permission !== "default" || !isVisible) {
@@ -18,12 +19,22 @@ export function NotificationPermissionBanner() {
     setIsRequesting(true);
     try {
       const result = await requestPermission();
-      if (result !== "default") {
-        // 권한 요청이 완료되면 (granted/denied) 배너 숨김
-        setIsVisible(false);
+      if (result === "granted") {
+        // 권한 부여됨, 푸시 구독 시도
+        setIsSubscribing(true);
+        const subscribed = await subscribeToPush();
+        if (subscribed) {
+          console.log("푸시 알림 구독 완료");
+        } else {
+          console.warn("푸시 알림 구독 실패");
+        }
+        setIsVisible(false); // 성공/실패 모두 배너 숨김
+      } else if (result === "denied") {
+        setIsVisible(false); // 거부 시 배너 숨김
       }
     } finally {
       setIsRequesting(false);
+      setIsSubscribing(false);
     }
   };
 
@@ -42,10 +53,10 @@ export function NotificationPermissionBanner() {
         <div className="flex gap-2">
           <Button
             onClick={handleRequestPermission}
-            disabled={isRequesting}
+            disabled={isRequesting || isSubscribing}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
           >
-            {isRequesting ? "요청 중..." : "알림 허용"}
+            {isRequesting ? "권한 요청 중..." : isSubscribing ? "구독 중..." : "알림 허용"}
           </Button>
           <Button onClick={handleDismiss} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 text-sm">
             나중에

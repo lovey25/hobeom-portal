@@ -30,24 +30,22 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    // 로컬 타임존 기준 오늘 날짜 (UTC 문제 방지)
+    // 한국 시간 기준 오늘 날짜
     const today = new Date();
-    const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
-      .toISOString()
-      .split("T")[0];
-    const date = searchParams.get("date") || localDate;
+    const kstOffset = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+    const kstDate = new Date(today.getTime() + kstOffset);
+    const date = searchParams.get("date") || kstDate.toISOString().split("T")[0];
 
     // 서버 기반: users.csv의 lastAccess로 마지막 접속일 확인
     const users = await getUsers();
     const user = users.find((u) => u.id === decoded.id);
-    
-    // UTC 타임스탬프를 로컬 날짜로 변환
+
+    // UTC 타임스탬프를 한국 날짜로 변환
     let lastAccessDate: string | undefined;
     if (user?.lastAccess) {
       const lastAccessUTC = new Date(user.lastAccess);
-      lastAccessDate = new Date(lastAccessUTC.getTime() - lastAccessUTC.getTimezoneOffset() * 60000)
-        .toISOString()
-        .split("T")[0];
+      const lastAccessKST = new Date(lastAccessUTC.getTime() + 9 * 60 * 60 * 1000);
+      lastAccessDate = lastAccessKST.toISOString().split("T")[0];
     }
 
     // 마지막 접속 날짜와 오늘 날짜가 다르면 리셋 및 완료율 기록

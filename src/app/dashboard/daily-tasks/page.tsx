@@ -19,6 +19,14 @@ import {
   setLastReminderTime,
 } from "@/lib/dailyTasksNotifications";
 
+// 한국 시간으로 오늘 날짜 계산
+const getTodayKST = (): string => {
+  const now = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+  const kstTime = new Date(now.getTime() + kstOffset);
+  return kstTime.toISOString().split("T")[0];
+};
+
 export default function DailyTasksPage() {
   const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
@@ -114,7 +122,7 @@ export default function DailyTasksPage() {
       }
 
       // 최근 30일 통계 로드
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = getTodayKST();
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
       const statsRes = await fetch(`/api/daily-tasks/stats?startDate=${startDate}&endDate=${endDate}`, {

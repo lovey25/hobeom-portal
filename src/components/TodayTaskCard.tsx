@@ -69,11 +69,10 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
   const loadTodayTasks = async () => {
     try {
       const token = cookieUtils.getToken();
-      // 로컬 타임존 기준 오늘 날짜 (UTC 문제 방지)
+      // 한국 시간 기준 오늘 날짜
       const now = new Date();
-      const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-        .toISOString()
-        .split("T")[0];
+      const kstOffset = 9 * 60 * 60 * 1000;
+      const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0];
 
       const response = await fetch(`/api/daily-tasks/today?date=${today}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -103,11 +102,10 @@ export function TodayTaskCard({ userId }: TodayTaskCardProps) {
   const toggleTaskCompletion = async (taskId: string) => {
     try {
       const token = cookieUtils.getToken();
-      // 로컬 타임존 기준 오늘 날짜
+      // 한국 시간 기준 오늘 날짜
       const now = new Date();
-      const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-        .toISOString()
-        .split("T")[0];
+      const kstOffset = 9 * 60 * 60 * 1000;
+      const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0];
 
       const response = await fetch("/api/daily-tasks/today", {
         method: "PATCH",

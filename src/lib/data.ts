@@ -1342,7 +1342,10 @@ export async function getDailyStats(userId: string, startDate?: string, endDate?
  */
 export async function resetDailyTasksForUser(userId: string, lastAccessDate: string): Promise<void> {
   try {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    // 한국 시간 기준 오늘 날짜
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0]; // YYYY-MM-DD
 
     // 마지막 접속일과 오늘 사이의 모든 날짜에 대해 완료율 기록
     const lastDate = new Date(lastAccessDate);
@@ -1350,7 +1353,9 @@ export async function resetDailyTasksForUser(userId: string, lastAccessDate: str
 
     // 마지막 접속일의 완료율 계산 및 저장
     while (lastDate < currentDate) {
-      const dateStr = lastDate.toISOString().split("T")[0];
+      // 한국 시간 기준 날짜 계산
+      const dateKST = new Date(lastDate.getTime() + kstOffset);
+      const dateStr = dateKST.toISOString().split("T")[0];
 
       // 해당 날짜의 로그 조회
       const logs = await getDailyTaskLogs(userId, dateStr);

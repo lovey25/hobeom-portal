@@ -10,7 +10,7 @@ import { AppIcon } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
 
 export function PortalHeader() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { title, subtitle } = usePageTitle();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,8 +36,10 @@ export function PortalHeader() {
 
   // 앱 목록 로드
   useEffect(() => {
-    loadApps();
-  }, [isAuthenticated, user]);
+    if (!isLoading) {
+      loadApps();
+    }
+  }, [isAuthenticated, user, isLoading]);
 
   const loadApps = async () => {
     try {
@@ -115,7 +117,12 @@ export function PortalHeader() {
 
           {/* 사용자 정보 및 로그인/로그아웃 */}
           <div className="flex items-center space-x-4">
-            {isAuthenticated && user ? (
+            {isLoading ? (
+              <div className="hidden md:flex items-center space-x-2">
+                <div className="animate-pulse bg-gray-200 h-10 w-20 rounded"></div>
+                <div className="animate-pulse bg-gray-200 h-10 w-24 rounded"></div>
+              </div>
+            ) : isAuthenticated && user ? (
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:block">
                   <span className="text-sm text-gray-600">안녕하세요,</span>
@@ -154,8 +161,8 @@ export function PortalHeader() {
           </div>
         </div>
 
-        {/* 슬라이드 메뉴 */}
-        {isMobileMenuOpen && (
+        {/* 슬라이드 메뉴 - isLoading 중에는 표시 안 함 */}
+        {!isLoading && isMobileMenuOpen && (
           <div className="absolute top-full right-0 w-64 bg-white shadow-xl border-t border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
             <div className="flex flex-col">
               {/* 메뉴 헤더 */}
