@@ -17,6 +17,7 @@ const path = require("path");
 const fs = require("fs");
 const csvParser = require("csv-parser");
 const webpush = require("web-push");
+const { timeStamp } = require("console");
 
 // 환경 변수 로드
 require("dotenv").config({ path: path.join(__dirname, "..", ".env.local") });
@@ -55,21 +56,122 @@ async function readCSV(filename) {
 }
 
 // 푸시 알림 전송
-async function sendPush(subscription, payload) {
+// CSV 쓰기 헬퍼 (간단 직렬화)
+async function writeCSV(filename, rows) {
+  const filepath = path.join(DATA_DIR, filename);
   try {
-    await webpush.sendNotification(subscription, JSON.stringify(payload));
-    return { success: true };
-  } catch (error) {
-    console.error("푸시 전송 실패:", error.message);
-
-    // 410 Gone = 구독 만료, 데이터에서 삭제 필요
-    if (error.statusCode === 410 || error.statusCode === 404) {
-      console.log("⚠️  만료된 구독 발견:", subscription.endpoint.substring(0, 50));
-      // TODO: subscriptions.csv에서 삭제
+    if (!rows || rows.length === 0) {
+      fs.writeFileSync(filepath, "", "utf8");
+      return;
     }
 
-    return { success: false, error: error.message };
+    const headers = Object.keys(rows[0]);
+    const escape = (v) => {
+      if (v === null || v === undefined) return "";
+      const s = String(v);
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const lines = [headers.join(",")].concat(rows.map((r) => headers.map((h) => escape(r[h])).join(",")));
+    fs.writeFileSync(filepath, lines.join("\n"), "utf8");
+  } catch (e) {
+    console.error("[writeCSV] 파일 쓰기 실패:", e && e.message ? e.message : e);
   }
+}
+
+// subscriptions.csv에서 endpoint로 항목 제거
+async function removeSubscriptionFromCSV(endpoint) {
+  try {
+    const rows = await readCSV("subscriptions.csv");
+    const filtered = rows.filter((r) => r.endpoint !== endpoint);
+    if (filtered.length === rows.length) return; // 변경 없음
+    await writeCSV("subscriptions.csv", filtered);
+    console.log(`🗑️ 구독 제거: ${endpoint.substring(0, 60)}...`);
+  } catch (err) {
+    console.error("[removeSubscriptionFromCSV] 실패:", err && err.message ? err.message : err);
+  }
+}
+
+// 푸시 전송: 우선 프로젝트의 sendPushNotification(reusable)을 사용하고, 실패하면 로컬 web-push fallback 사용
+// 로드 시도
+let libSendPush = null;
+try {
+  // 시도: ts-node/register를 로드하면 .ts 파일을 require할 수 있음 (dev 환경)
+  try {
+    require('ts-node/register');
+    console.log('ℹ️ ts-node/register loaded, TypeScript requires enabled');
+  } catch (e) {
+    // 조용히 넘어감 - ts-node가 없으면 계속 진행
+  }
+  // require 시 TypeScript 파일이면 실패할 수 있으므로 안전하게 시도
+  const pushLib = require(path.join(__dirname, '..', 'src', 'lib', 'push'));
+  libSendPush = pushLib && (pushLib.sendPushNotification || pushLib.default || pushLib);
+  if (libSendPush) console.log('✅ sendPushNotification imported from src/lib/push');
+} catch (e) {
+  // 무시: 폴백으로 로컬 sendPushFallback 사용
+  // 콘솔은 디버깅에 도움되므로 로깅
+  console.log('⚠️ sendPushNotification import 실패, 로컬 폴백 사용:', e && e.message ? e.message : e);
+}
+
+// 기존의 web-push 기반 구현을 폴백으로 보존
+async function sendPushFallback(rawSubscription, payload) {
+  // 정규화된 subscription 객체 생성 (CSV 필드명 차이 대응)
+  const subscription = {
+    endpoint: rawSubscription.endpoint,
+    keys: {
+      p256dh:
+        (rawSubscription.keys && rawSubscription.keys.p256dh) || rawSubscription.p256dh_key || rawSubscription.p256dh || "",
+      auth: (rawSubscription.keys && rawSubscription.keys.auth) || rawSubscription.auth_key || rawSubscription.auth || "",
+    },
+  };
+
+  const payloadString = typeof payload === "string" ? payload : JSON.stringify(payload);
+
+  const options = {
+    TTL: 60, // 1분
+  };
+
+  try {
+    await webpush.sendNotification(subscription, payloadString, options);
+    return { success: true, message: "푸시 알림 전송 성공" };
+  } catch (error) {
+    const statusCode = error && (error.statusCode || error.status);
+    const body = (error && (error.body || error.message)) || String(error);
+
+    console.error("푸시 전송 실패(폴백):", body, "statusCode:", statusCode);
+
+    // 구독 만료(410) 또는 Not Found(404) -> CSV에서 제거
+    if (statusCode === 410 || statusCode === 404) {
+      try {
+        await removeSubscriptionFromCSV(subscription.endpoint);
+      } catch (e) {
+        console.error("구독 제거 중 오류(폴백):", e && e.message ? e.message : e);
+      }
+    }
+
+    return { success: false, message: body, statusCode };
+  }
+}
+
+// 통합 sendPush: libSendPush가 있으면 사용, 아니면 폴백
+async function sendPush(rawSubscription, payload) {
+  if (libSendPush) {
+    try {
+      // libSendPush는 sendPushNotification 인터페이스를 따름: (subscription, payload) => { success, message }
+      const result = await libSendPush(rawSubscription, payload);
+      // 보수적으로 반환 형태 정규화
+      if (result && typeof result.success !== 'undefined') return result;
+      return { success: !!result, message: result && result.message ? result.message : JSON.stringify(result) };
+    } catch (err) {
+      console.error('sendPushNotification 호출 중 오류, 폴백으로 전환:', err && err.message ? err.message : err);
+      return await sendPushFallback(rawSubscription, payload);
+    }
+  }
+
+  return await sendPushFallback(rawSubscription, payload);
 }
 
 // 리마인더 시간 체크
@@ -170,12 +272,12 @@ async function checkAndSendNotifications() {
         continue;
       }
 
-      // 구독 객체 생성
+      // 구독 객체 생성 (CSV 필드명 차이를 안전하게 정규화)
       const subscription = {
         endpoint: sub.endpoint,
         keys: {
-          p256dh: sub.p256dh_key,
-          auth: sub.auth_key,
+          p256dh: sub.p256dh_key || sub.p256dh || (sub.keys && sub.keys.p256dh) || "",
+          auth: sub.auth_key || sub.auth || (sub.keys && sub.keys.auth) || "",
         },
       };
 
@@ -200,9 +302,8 @@ async function checkAndSendNotifications() {
       if (notificationSettings.dailyTasksReminderEnabled) {
         const reminderTimes = notificationSettings.dailyTasksReminderTimes || [];
 
-        // 변경: 매칭된 시간을 얻음 (예: "09:00")
-        // const matchedReminderTime = shouldSendReminderNow(reminderTimes);
-        const matchedReminderTime = "08:00";
+  // 변경: 매칭된 시간을 얻음 (예: "09:00")
+  const matchedReminderTime = shouldSendReminderNow(reminderTimes);
 
         if (reminderTimes.length > 0 && matchedReminderTime) {
           // 오늘 이미 보냈는지 확인 (시간까지 포함한 고유 키 사용)
@@ -214,21 +315,31 @@ async function checkAndSendNotifications() {
 
             console.log(`📢 리마인더 전송: ${userId} - ${matchedReminderTime} - ${message.title}`);
 
-            const result = await sendPush(subscription, {
-              title: message.title,
-              body: message.body,
-              data: {
-                url: "/dashboard/daily-tasks",
-                type: "daily-tasks-reminder",
-                scheduledAt: matchedReminderTime,
-              },
-            });
+            try {
+              const result = await sendPush(subscription, {
+                title: message.title,
+                body: message.body,
+                data: {
+                  url: "/dashboard/daily-tasks",
+                  type: "daily-tasks-reminder",
+                  scheduledAt: matchedReminderTime,
+                  timeStamp: new Date().toISOString(),
+                },
+              });
 
-            if (result.success) {
-              markAsNotified(userId, notifyKey);
-              console.log(`   ✅ 전송 성공`);
-            } else {
-              console.log(`   ❌ 전송 실패: ${result.error}`);
+              const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
+              const usedImpl = libSendPush ? "project-lib" : "fallback-web-push";
+
+              if (result && result.success) {
+                markAsNotified(userId, notifyKey);
+                console.log(`   ✅ 전송 성공 (${usedImpl}) → ${endpointSnippet}...`);
+              } else {
+                const errMsg = result && (result.message || result.error) ? (result.message || result.error) : JSON.stringify(result);
+                console.log(`   ❌ 전송 실패 → ${endpointSnippet}...: ${errMsg}`);
+              }
+            } catch (err) {
+              const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
+              console.error(`   ❌ 전송 중 예외 발생 → ${endpointSnippet}...:`, err && err.message ? err.message : err);
             }
           }
         }
@@ -247,20 +358,29 @@ async function checkAndSendNotifications() {
             if (!wasNotifiedToday(userId, `travel-${trip.id}`)) {
               console.log(`✈️  여행 알림 전송: ${userId} - ${trip.name} (D-${daysUntil})`);
 
-              const result = await sendPush(subscription, {
-                title: `✈️ ${trip.name} 준비 알림 (D-${daysUntil})`,
-                body: `여행이 ${daysUntil}일 남았습니다. 준비물을 확인해보세요!`,
-                data: {
-                  url: `/dashboard/travel-prep?trip=${trip.id}`,
-                  type: "travel-prep",
-                },
-              });
+              try {
+                const result = await sendPush(subscription, {
+                  title: `✈️ ${trip.name} 준비 알림 (D-${daysUntil})`,
+                  body: `여행이 ${daysUntil}일 남았습니다. 준비물을 확인해보세요!`,
+                  data: {
+                    url: `/dashboard/travel-prep?trip=${trip.id}`,
+                    type: "travel-prep",
+                  },
+                });
 
-              if (result.success) {
-                markAsNotified(userId, `travel-${trip.id}`);
-                console.log(`   ✅ 전송 성공`);
-              } else {
-                console.log(`   ❌ 전송 실패: ${result.error}`);
+                const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
+                const usedImpl = libSendPush ? "project-lib" : "fallback-web-push";
+
+                if (result && result.success) {
+                  markAsNotified(userId, `travel-${trip.id}`);
+                  console.log(`   ✅ 전송 성공 (${usedImpl}) → ${endpointSnippet}...`);
+                } else {
+                  const errMsg = result && (result.message || result.error) ? (result.message || result.error) : JSON.stringify(result);
+                  console.log(`   ❌ 전송 실패 → ${endpointSnippet}...: ${errMsg}`);
+                }
+              } catch (err) {
+                const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
+                console.error(`   ❌ 전송 중 예외 발생 → ${endpointSnippet}...:`, err && err.message ? err.message : err);
               }
             }
           }

@@ -51,9 +51,7 @@ export async function sendPushNotification(
   }
 
   try {
-    const payloadString = JSON.stringify(payload);
-
-    await webpush.sendNotification(subscription, payloadString);
+    await webpush.sendNotification(subscription, JSON.stringify(payload));
 
     return {
       success: true,
