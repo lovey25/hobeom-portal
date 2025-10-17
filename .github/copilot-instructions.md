@@ -16,62 +16,43 @@
 
 ## Architecture Patterns
 
-### 1. Three-Layer Auth System
+```markdown
+# Copilot instructions — Hobeom Portal (concise)
 
-**Layer 1: Global State** (`src/contexts/AuthContext.tsx`)
-# Copilot instructions — concise reference
+This file contains the repo-specific rules and examples an AI coding agent needs to be productive.
 
-This file is a short, actionable reference of project rules and patterns. Full examples remain in the codebase.
+- Stack: Next.js 15 (App Router, Turbopack), React 19 + TypeScript. All dev/build scripts use `--turbopack` (see `package.json`).
+- Data: CSV-backed storage in project root `data/`. Committed `*.sample.csv` files are used to initialize missing runtime CSVs via `src/lib/data.ts:ensureDataFile`.
+- Auth: JWT + bcrypt. Tokens and user object are stored in cookies (`hobeom-portal-token`, `hobeom-portal-user`, 7d, SameSite=Strict). Default secret: `your-secret-key-change-in-production` (override with `JWT_SECRET`).
 
-## Overview
-- Stack: Next.js 15 (App Router) + React 19 + TypeScript
-- Data: CSV-backed storage under `data/` with `.sample.csv` seeds
-- Auth: JWT + bcrypt; tokens stored in cookies
+Key conventions and examples
 
-## Core rules (must-know)
-- Turbopack: All dev/build scripts include `--turbopack` (see `package.json` scripts)
-- Data files: runtime CSVs live at project root `data/`. `.sample.csv` files are committed; actual `.csv` are created at runtime.
-- API response standard: { success: boolean, message: string (Korean), data?: any }
-- Cookie keys: `hobeom-portal-token`, `hobeom-portal-user` — 7d expiry, SameSite=Strict
-- Default JWT secret: `your-secret-key-change-in-production` (override with `JWT_SECRET` env)
+- API response shape: { success: boolean, message: string (Korean), data?: any }. Use helpers in `src/lib/apiHelpers.ts` (`successResponse`, `errorResponse`, `withErrorHandler`).
+- Auth flow: client `src/contexts/AuthContext.tsx` calls `/api/auth/verify` on mount. Guard UI by checking `isLoading` before rendering protected content.
+- Route & API protection: UI wrapper `ProtectedRoute` for client routes; server helpers `requireAuth` / `requireAdmin` in `src/lib/apiHelpers.ts` for API routes.
+- CSV I/O: Always go through `src/lib/data.ts` (readCSV/writeCSV). CSV headers must match `src/types/index.ts`. Prefer batch writes (write whole file) to avoid corruption.
 
-## Architecture (3-layer summary)
-- Layer 1 — Global auth state: `src/contexts/AuthContext.tsx` verifies token on mount via `/api/auth/verify`. Always check `isLoading` before conditional rendering to prevent auth flash.
-- Layer 2 — Route protection: UI wrapper `ProtectedRoute` enforces role-based access and redirects.
-- Layer 3 — API-level checks: use helpers in `src/lib/apiHelpers.ts` (`requireAuth`, `requireAdmin`, `successResponse`, `errorResponse`).
+Developer workflows (concrete)
 
-## CSV data guidelines
-- Use `src/lib/data.ts` for all CSV reads/writes. Missing `.csv` files are auto-created from `.sample.csv` via `ensureDataFile`.
-- CSV headers must match TypeScript interfaces in `src/types/index.ts`.
-- Prefer batch write APIs (single atomic write) when adding/updating multiple rows to avoid race conditions.
+- Initialize dev CSVs: `bash scripts/init-dev.sh` (copies `*.sample.csv` to `data/`).
+- Run dev: `npm run dev` (starts Next with Turbopack and push scheduler via `nodemon`).
+- Generate VAPID keys for push: `node scripts/generate-vapid-keys.js`.
+- Run push scheduler standalone: `npm run push-scheduler` or `node scripts/push-scheduler.js`.
 
-## API contract
-- Must return the standard response shape. Authentication failures → 401, server errors → 500.
-- Common endpoints: `/api/auth/login`, `/api/auth/verify`, `/api/apps`, admin-only `/api/users`, and CSV batch endpoints for bulk writes.
+Files and locations to consult (quick map)
 
-## Dev commands (quick)
-```bash
-npm run dev   # includes --turbopack
-npm run build # includes --turbopack
-npm run lint
-bash scripts/init-dev.sh  # copy sample CSVs for local dev
+- API helpers: `src/lib/apiHelpers.ts` (response shapes, requireAuth/requireAdmin, extractUser).
+- CSV/data layer: `src/lib/data.ts` (ensureDataFile, readCSV, writeCSV, mapping helpers).
+- Auth provider: `src/contexts/AuthContext.tsx` (login/logout/checkAuth patterns, cookie usage).
+- Types: `src/types/index.ts` (CSV TypeScript contracts).
+- Common UI: `src/components/common/` (ProtectedRoute, LoadingSpinner, ErrorMessage).
+
+Pitfalls & rules to enforce automatically
+
+- Always include `--turbopack` for Next.js dev/build commands.
+- Do not write CSV rows piecemeal; always use the writeCSV batch helpers.
+- API messages are in Korean; preserve existing wording when modifying responses.
+- Avoid changing cookie keys or token formats unless updating `src/lib/auth.ts` and `src/contexts/AuthContext.tsx` together.
+
+If anything here is unclear or you need more examples (API route patterns, CSV headers, or common tests), tell me which area and I will expand with targeted snippets.
 ```
-
-## Common components & patterns
-- `ProtectedRoute`, `LoadingSpinner`, `ErrorMessage` are standardized common components.
-- CSV editor: spreadsheet-style editor (single-click select, double-click edit, auto-backup `.backup`).
-- Group/accordion UI: use `Set<string>` to track collapsed groups for O(1) checks.
-
-## File layout (essential)
-- `src/`: app/, components/, contexts/, lib/, types/
-- `data/`: runtime CSV files (e.g. `users.csv`, `apps.csv`) and `*.sample.csv` templates
-
-## Environment
-- Recommended: set `JWT_SECRET` (defaults to fallback). Set `NODE_ENV` appropriately to enable cookie secure flags.
-
-## Common pitfalls
-- Missing `--turbopack` in scripts — check `package.json`.
-- CSV missing — run `scripts/init-dev.sh` or let `ensureDataFile` create files on first read.
-- Auth flicker: always account for `isLoading` in `AuthContext` before rendering protected UI.
-- API must follow response contract; messages are expected in Korean.
-- Avoid per-row CSV writes; use batch APIs to reduce corruption risk.

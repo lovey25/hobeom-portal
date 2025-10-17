@@ -92,19 +92,17 @@ export default function DailyTasksPage() {
     }
   };
 
-  const checkAndSendEncouragement = async (completedCount: number, totalCount: number) => {
-    if (!user || !encouragementEnabled || totalCount === 0) return;
-
-    const completionRate = completedCount / totalCount;
-    const lastThreshold = getLastNotificationThreshold(user.id);
-    const message = getEncouragementMessage(completionRate, lastThreshold);
-
-    if (message) {
-      await notifyEncouragement(message.title, message.body);
-      setLastNotificationThreshold(user.id, message.threshold);
-      console.log(`✅ 응원 메시지 전송: ${message.title} (완료율: ${Math.floor(completionRate * 100)}%)`);
-    }
-  };
+  // 응원 메시지는 향후 구현 예정
+  // const checkAndSendEncouragement = async (completedCount: number, totalCount: number) => {
+  //   if (!user || !encouragementEnabled || totalCount === 0) return;
+  //   const completionRate = completedCount / totalCount;
+  //   const lastThreshold = getLastNotificationThreshold(user.id);
+  //   const message = getEncouragementMessage(completionRate, lastThreshold);
+  //   if (message) {
+  //     await notifyEncouragement(message.title, message.body);
+  //     setLastNotificationThreshold(user.id, message.threshold);
+  //   }
+  // };
 
   const loadData = async () => {
     try {
@@ -215,29 +213,6 @@ export default function DailyTasksPage() {
     }
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (!confirm("이 할일을 삭제하시겠습니까?")) return;
-
-    try {
-      const token = cookieUtils.getToken();
-      const res = await fetch(`/api/daily-tasks?taskId=${taskId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        await loadData();
-      } else {
-        alert(result.message || "할일 삭제에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error("할일 삭제 실패:", error);
-      alert("할일 삭제 중 오류가 발생했습니다.");
-    }
-  };
-
   // 할일 선택/해제
   const toggleTaskSelection = (taskId: string) => {
     const newSelected = new Set(selectedTasks);
@@ -284,12 +259,6 @@ export default function DailyTasksPage() {
       console.error("일괄 삭제 실패:", error);
       alert("일괄 삭제 중 오류가 발생했습니다.");
     }
-  };
-
-  const getImportanceLabel = (importance: number) => {
-    if (importance === 3) return "높음";
-    if (importance === 2) return "보통";
-    return "낮음";
   };
 
   const getImportanceColor = (importance: number) => {

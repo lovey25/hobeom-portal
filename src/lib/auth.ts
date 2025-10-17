@@ -18,18 +18,18 @@ export function generateToken(user: User): string {
   );
 }
 
-export function verifyToken(token: string): any {
+export function verifyToken(token: string): jwt.JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
+    return jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+  } catch {
     return null;
   }
 }
 
-export function decodeToken(token: string): any {
+export function decodeToken(token: string): jwt.JwtPayload | null {
   try {
-    return jwt.decode(token);
-  } catch (error) {
+    return jwt.decode(token) as jwt.JwtPayload | null;
+  } catch {
     return null;
   }
 }

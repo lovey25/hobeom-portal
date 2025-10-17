@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import type { JwtPayload } from "jsonwebtoken";
 import { getPushSubscriptions } from "@/lib/data";
 import { sendPushNotification, isVapidConfigured } from "@/lib/push";
 
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "인증이 필요합니다" }, { status: 401 });
     }
 
-    const userId = decoded.id || decoded.userId; // id 또는 userId 필드 지원
+    const decodedPayload = decoded as JwtPayload;
+    const userId = decodedPayload?.id ?? decodedPayload?.userId; // id 또는 userId 필드 지원
 
     // VAPID 설정 확인
     if (!isVapidConfigured()) {
@@ -68,10 +70,11 @@ export async function POST(request: NextRequest) {
         failed: failCount,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Test push error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, message: error.message || "테스트 푸시 전송 중 오류가 발생했습니다" },
+      { success: false, message: message || "테스트 푸시 전송 중 오류가 발생했습니다" },
       { status: 500 }
     );
   }

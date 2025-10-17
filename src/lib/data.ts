@@ -2,7 +2,23 @@ import fs from "fs";
 import path from "path";
 import csvParser from "csv-parser";
 import bcrypt from "bcryptjs";
-import { User, AppIcon, TravelTypeTemplate, TravelItem, Bag, TripList, TripItem, BagStats } from "@/types";
+import {
+  User,
+  AppIcon,
+  TravelTypeTemplate,
+  TravelItem,
+  Bag,
+  TripList,
+  TripItem,
+  BagStats,
+  DailyTask,
+  DailyTaskLog,
+  DailyStat,
+  UserDailyStatus,
+  SettingsConfig,
+  UserAppSetting,
+  ActivityLog,
+} from "@/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -17,7 +33,7 @@ async function ensureDataFile(filename: string): Promise<void> {
   }
 }
 
-export async function readCSV<T>(filename: string): Promise<T[]> {
+export async function readCSV<T = unknown>(filename: string): Promise<T[]> {
   // 파일이 없으면 샘플 파일로부터 초기화
   await ensureDataFile(filename);
 
@@ -43,7 +59,7 @@ export async function readCSV<T>(filename: string): Promise<T[]> {
  * - 쉼표, 따옴표, 개행이 있으면 따옴표로 감싸기
  * - 따옴표는 ""로 이스케이프
  */
-function escapeCSVValue(value: any): string {
+function escapeCSVValue(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
   }
@@ -64,7 +80,7 @@ function escapeCSVValue(value: any): string {
   return stringValue;
 }
 
-export async function writeCSV<T extends Record<string, any>>(filename: string, data: T[]): Promise<void> {
+export async function writeCSV<T extends object>(filename: string, data: T[]): Promise<void> {
   const filepath = path.join(DATA_DIR, filename);
 
   if (data.length === 0) {
@@ -80,7 +96,7 @@ export async function writeCSV<T extends Record<string, any>>(filename: string, 
 }
 
 // Utility function to map raw user data to User type
-function mapRawUser(rawUser: any): User {
+function mapRawUser(rawUser: Record<string, string>): User {
   return {
     id: rawUser.id,
     username: rawUser.username,
@@ -95,7 +111,7 @@ function mapRawUser(rawUser: any): User {
 }
 
 // Utility function to map raw travel item data
-function mapRawTravelItem(item: any): TravelItem {
+function mapRawTravelItem(item: Record<string, string>): TravelItem {
   return {
     id: item.id,
     name: item.name,
@@ -110,7 +126,7 @@ function mapRawTravelItem(item: any): TravelItem {
 }
 
 // Utility function to map raw bag data
-function mapRawBag(bag: any): Bag {
+function mapRawBag(bag: Record<string, string>): Bag {
   return {
     id: bag.id,
     name: bag.name,
@@ -123,18 +139,18 @@ function mapRawBag(bag: any): Bag {
 }
 
 export async function getUsers(): Promise<User[]> {
-  const rawUsers = await readCSV("users.csv");
+  const rawUsers = await readCSV<Record<string, string>>("users.csv");
   return rawUsers.map(mapRawUser);
 }
 
 export async function getUsersWithoutPassword(): Promise<Omit<User, "passwordHash">[]> {
-  const rawUsers = await readCSV("users.csv");
-  return rawUsers.map(mapRawUser).map(({ passwordHash, ...user }) => user);
+  const rawUsers = await readCSV<Record<string, string>>("users.csv");
+  return rawUsers.map(mapRawUser).map(({ passwordHash: _, ...user }) => user);
 }
 
 export async function getUserByUsername(username: string): Promise<(User & { passwordHash: string }) | null> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
     const user = rawUsers.find((u) => u.username === username);
     return user ? mapRawUser(user) : null;
   } catch (error) {
@@ -145,7 +161,7 @@ export async function getUserByUsername(username: string): Promise<(User & { pas
 
 export async function getApps(): Promise<AppIcon[]> {
   try {
-    const rawApps = await readCSV<any>("apps.csv");
+    const rawApps = await readCSV<Record<string, string>>("apps.csv");
     return rawApps.map((app) => ({
       id: app.id,
       name: app.name,
@@ -178,7 +194,7 @@ export async function getAllUsersWithStats(): Promise<User[]> {
 
 export async function updateUser(userId: string, updates: Partial<User>): Promise<void> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
     const userIndex = rawUsers.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
@@ -208,7 +224,7 @@ export async function updateUser(userId: string, updates: Partial<User>): Promis
 
 export async function deleteUser(userId: string): Promise<void> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
     const filteredUsers = rawUsers.filter((u) => u.id !== userId);
 
     if (rawUsers.length === filteredUsers.length) {
@@ -224,7 +240,7 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function getUserByEmail(email: string): Promise<(User & { passwordHash: string }) | null> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
     const user = rawUsers.find((u) => u.email === email);
     return user ? mapRawUser(user) : null;
   } catch (error) {
@@ -241,7 +257,7 @@ export async function createUser(userData: {
   role?: "admin" | "user";
 }): Promise<User> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
 
     // 새 ID 생성 (기존 ID들 중 최대값 + 1)
     const maxId = rawUsers.reduce((max, user) => Math.max(max, parseInt(user.id) || 0), 0);
@@ -251,6 +267,21 @@ export async function createUser(userData: {
 
     // 비밀번호 해시화
     const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    const newUserRecord = {
+      id: userId,
+      username: userData.username,
+      email: userData.email,
+      name: userData.name,
+      password_hash: hashedPassword,
+      role: userData.role || "user",
+      created_at: now,
+      last_login: "",
+      last_access: "",
+    };
+
+    rawUsers.push(newUserRecord);
+    await writeCSV("users.csv", rawUsers);
 
     const newUser: User = {
       id: userId,
@@ -264,9 +295,6 @@ export async function createUser(userData: {
       lastAccess: undefined,
     };
 
-    rawUsers.push(newUser);
-    await writeCSV("users.csv", rawUsers);
-
     return newUser;
   } catch (error) {
     console.error("Error creating user:", error);
@@ -276,7 +304,7 @@ export async function createUser(userData: {
 
 export async function updateUserLastLogin(userId: string): Promise<void> {
   try {
-    const rawUsers = await readCSV<any>("users.csv");
+    const rawUsers = await readCSV<Record<string, string>>("users.csv");
     const userIndex = rawUsers.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
@@ -315,7 +343,7 @@ export async function updateUserLastAccess(userId: string): Promise<void> {
  */
 export async function getTravelTypes(): Promise<TravelTypeTemplate[]> {
   try {
-    const rawTypes = await readCSV<any>("travel-types.csv");
+    const rawTypes = await readCSV<Record<string, string>>("travel-types.csv");
     return rawTypes.map((t) => ({
       id: t.id,
       name: t.name,
@@ -333,7 +361,7 @@ export async function getTravelTypes(): Promise<TravelTypeTemplate[]> {
  */
 export async function getTravelItems(activeOnly = true): Promise<TravelItem[]> {
   try {
-    const rawItems = await readCSV<any>("travel-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("travel-items.csv");
     const items = rawItems.map(mapRawTravelItem);
     return activeOnly ? items.filter((item) => item.isActive) : items;
   } catch (error) {
@@ -355,7 +383,7 @@ export async function createTravelItem(data: {
   weight: number;
 }): Promise<TravelItem> {
   try {
-    const rawItems = await readCSV<any>("travel-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("travel-items.csv");
     const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
     const newId = (maxId + 1).toString();
 
@@ -407,7 +435,7 @@ export async function updateTravelItem(
   }
 ): Promise<void> {
   try {
-    const rawItems = await readCSV<any>("travel-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("travel-items.csv");
     const itemIndex = rawItems.findIndex((item) => item.id === itemId);
 
     if (itemIndex === -1) {
@@ -434,7 +462,7 @@ export async function updateTravelItem(
  */
 export async function deleteTravelItem(itemId: string): Promise<void> {
   try {
-    const rawItems = await readCSV<any>("travel-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("travel-items.csv");
     const itemIndex = rawItems.findIndex((item) => item.id === itemId);
 
     if (itemIndex === -1) {
@@ -456,7 +484,7 @@ export async function deleteTravelItem(itemId: string): Promise<void> {
  */
 export async function getBags(activeOnly = true): Promise<Bag[]> {
   try {
-    const rawBags = await readCSV<any>("bags.csv");
+    const rawBags = await readCSV<Record<string, string>>("bags.csv");
     const bags = rawBags.map(mapRawBag);
     return activeOnly ? bags.filter((bag) => bag.isActive) : bags;
   } catch (error) {
@@ -476,7 +504,7 @@ export async function createBag(data: {
   weight: number;
 }): Promise<Bag> {
   try {
-    const rawBags = await readCSV<any>("bags.csv");
+    const rawBags = await readCSV<Record<string, string>>("bags.csv");
     const maxId = rawBags.reduce((max, bag) => Math.max(max, parseInt(bag.id) || 0), 0);
     const newId = (maxId + 1).toString();
 
@@ -522,7 +550,7 @@ export async function updateBag(
   }
 ): Promise<void> {
   try {
-    const rawBags = await readCSV<any>("bags.csv");
+    const rawBags = await readCSV<Record<string, string>>("bags.csv");
     const bagIndex = rawBags.findIndex((bag) => bag.id === bagId);
 
     if (bagIndex === -1) {
@@ -548,7 +576,7 @@ export async function updateBag(
 export async function deleteBag(bagId: string): Promise<void> {
   try {
     // 가방 소프트 삭제
-    const rawBags = await readCSV<any>("bags.csv");
+    const rawBags = await readCSV<Record<string, string>>("bags.csv");
     const bagIndex = rawBags.findIndex((bag) => bag.id === bagId);
 
     if (bagIndex === -1) {
@@ -559,7 +587,7 @@ export async function deleteBag(bagId: string): Promise<void> {
     await writeCSV("bags.csv", rawBags);
 
     // 해당 가방에 배정된 아이템들을 미배정 상태로 변경
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const updatedItems = rawItems.map((item) => {
       if (item.bag_id === bagId) {
         return { ...item, bag_id: "" };
@@ -579,7 +607,7 @@ export async function deleteBag(bagId: string): Promise<void> {
  */
 export async function getTripLists(userId: string): Promise<TripList[]> {
   try {
-    const rawLists = await readCSV<any>("trip-lists.csv");
+    const rawLists = await readCSV<Record<string, string>>("trip-lists.csv");
     const userLists = rawLists
       .filter((list) => list.user_id === userId)
       .map((list) => ({
@@ -611,7 +639,7 @@ export async function createTripList(data: {
   type: "여행" | "출장";
 }): Promise<TripList> {
   try {
-    const rawLists = await readCSV<any>("trip-lists.csv");
+    const rawLists = await readCSV<Record<string, string>>("trip-lists.csv");
     const maxId = rawLists.reduce((max, list) => Math.max(max, parseInt(list.id) || 0), 0);
     const newId = (maxId + 1).toString();
     const now = new Date().toISOString();
@@ -651,7 +679,7 @@ export async function createTripList(data: {
  */
 export async function updateTripListLastUsed(tripListId: string): Promise<void> {
   try {
-    const rawLists = await readCSV<any>("trip-lists.csv");
+    const rawLists = await readCSV<Record<string, string>>("trip-lists.csv");
     const listIndex = rawLists.findIndex((list) => list.id === tripListId);
 
     if (listIndex === -1) {
@@ -671,7 +699,7 @@ export async function updateTripListLastUsed(tripListId: string): Promise<void> 
  */
 export async function getTripItems(tripListId: string): Promise<TripItem[]> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     return rawItems
       .filter((item) => item.trip_list_id === tripListId)
       .map((item) => ({
@@ -701,7 +729,7 @@ export async function addTripItem(data: {
   bagId?: string;
 }): Promise<TripItem> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
     const newId = (maxId + 1).toString();
 
@@ -747,7 +775,7 @@ export async function addTripItemsBatch(
   items: Array<{ itemId: string; itemType: "item" | "bag"; bagId?: string }>
 ): Promise<TripItem[]> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
 
     // 최대 ID와 order 계산
     const maxId = rawItems.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
@@ -755,7 +783,7 @@ export async function addTripItemsBatch(
     const maxOrder = tripItems.reduce((max, item) => Math.max(max, parseInt(item.order) || 0), 0);
 
     const newItems: TripItem[] = [];
-    const newRawItems: any[] = [];
+    const newRawItems: Record<string, string>[] = [];
 
     // 모든 새 아이템 생성
     items.forEach((item, index) => {
@@ -806,7 +834,7 @@ export async function updateTripItem(
   updates: { bagId?: string; isPrepared?: boolean; quantity?: number }
 ): Promise<void> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const itemIndex = rawItems.findIndex((item) => item.id === itemId);
 
     if (itemIndex === -1) {
@@ -835,7 +863,7 @@ export async function updateTripItem(
  */
 export async function deleteTripItem(itemId: string): Promise<void> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const itemToDelete = rawItems.find((item) => item.id === itemId);
 
     if (!itemToDelete) {
@@ -869,7 +897,7 @@ export async function deleteTripItem(itemId: string): Promise<void> {
  */
 export async function deleteTripItemsBatch(itemIds: string[]): Promise<number> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const itemIdsSet = new Set(itemIds);
     const filteredItems = rawItems.filter((item) => !itemIdsSet.has(item.id));
 
@@ -892,7 +920,7 @@ export async function deleteTripItemsBatch(itemIds: string[]): Promise<number> {
  */
 export async function updateTripItemsBagBatch(itemIds: string[], newBagId: string): Promise<number> {
   try {
-    const rawItems = await readCSV<any>("trip-items.csv");
+    const rawItems = await readCSV<Record<string, string>>("trip-items.csv");
     const itemIdsSet = new Set(itemIds);
     let updatedCount = 0;
 
@@ -984,9 +1012,9 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
 /**
  * 사용자의 할일 목록 조회
  */
-export async function getDailyTasks(userId: string, activeOnly = true): Promise<any[]> {
+export async function getDailyTasks(userId: string, activeOnly = true): Promise<DailyTask[]> {
   try {
-    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const rawTasks = await readCSV<Record<string, string>>("daily-tasks.csv");
     let tasks = rawTasks.filter((task) => task.user_id === userId);
 
     if (activeOnly) {
@@ -1019,9 +1047,9 @@ export async function createDailyTask(data: {
   title: string;
   description: string;
   importance: number;
-}): Promise<any> {
+}): Promise<DailyTask> {
   try {
-    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const rawTasks = await readCSV<Record<string, string>>("daily-tasks.csv");
 
     const maxId = rawTasks.reduce((max, task) => Math.max(max, parseInt(task.id) || 0), 0);
     const newId = (maxId + 1).toString();
@@ -1073,7 +1101,7 @@ export async function updateDailyTask(
   }
 ): Promise<void> {
   try {
-    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const rawTasks = await readCSV<Record<string, string>>("daily-tasks.csv");
     const taskIndex = rawTasks.findIndex((task) => task.id === taskId);
 
     if (taskIndex === -1) {
@@ -1097,7 +1125,7 @@ export async function updateDailyTask(
  */
 export async function deleteDailyTask(taskId: string): Promise<void> {
   try {
-    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const rawTasks = await readCSV<Record<string, string>>("daily-tasks.csv");
     const taskIndex = rawTasks.findIndex((task) => task.id === taskId);
 
     if (taskIndex === -1) {
@@ -1117,7 +1145,7 @@ export async function deleteDailyTask(taskId: string): Promise<void> {
  */
 export async function reorderDailyTasks(userId: string, taskId: string, direction: "up" | "down"): Promise<void> {
   try {
-    const rawTasks = await readCSV<any>("daily-tasks.csv");
+    const rawTasks = await readCSV<Record<string, string>>("daily-tasks.csv");
 
     // 사용자의 활성 할일만 필터링
     const userTasks = rawTasks.filter((t) => t.user_id === userId && t.is_active === "true");
@@ -1156,9 +1184,9 @@ export async function reorderDailyTasks(userId: string, taskId: string, directio
 /**
  * 특정 날짜의 할일 로그 조회
  */
-export async function getDailyTaskLogs(userId: string, date: string): Promise<any[]> {
+export async function getDailyTaskLogs(userId: string, date: string): Promise<DailyTaskLog[]> {
   try {
-    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+    const rawLogs = await readCSV<Record<string, string>>("daily-task-logs.csv");
     const logs = rawLogs.filter((log) => log.user_id === userId && log.date === date);
 
     return logs.map((log) => ({
@@ -1180,7 +1208,7 @@ export async function getDailyTaskLogs(userId: string, date: string): Promise<an
  */
 export async function toggleTaskCompletion(userId: string, taskId: string, date: string): Promise<void> {
   try {
-    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+    const rawLogs = await readCSV<Record<string, string>>("daily-task-logs.csv");
     const logIndex = rawLogs.findIndex((log) => log.user_id === userId && log.task_id === taskId && log.date === date);
 
     if (logIndex === -1) {
@@ -1219,7 +1247,7 @@ export async function saveDailyStats(
   completedTasks: number
 ): Promise<void> {
   try {
-    const rawStats = await readCSV<any>("daily-stats.csv");
+    const rawStats = await readCSV<Record<string, string>>("daily-stats.csv");
 
     // 해당 날짜의 기록이 이미 있는지 확인
     const existingIndex = rawStats.findIndex((stat) => stat.user_id === userId && stat.date === date);
@@ -1257,9 +1285,9 @@ export async function saveDailyStats(
 /**
  * 일일 통계 조회
  */
-export async function getDailyStats(userId: string, startDate?: string, endDate?: string): Promise<any[]> {
+export async function getDailyStats(userId: string, startDate?: string, endDate?: string): Promise<DailyStat[]> {
   try {
-    const rawStats = await readCSV<any>("daily-stats.csv");
+    const rawStats = await readCSV<Record<string, string>>("daily-stats.csv");
     let stats = rawStats.filter((stat) => stat.user_id === userId);
 
     if (startDate) {
@@ -1323,7 +1351,7 @@ export async function resetDailyTasksForUser(userId: string, lastAccessDate: str
 
     // 오늘 날짜의 로그 초기화 (새로운 날짜의 로그 생성)
     const tasks = await getDailyTasks(userId);
-    const rawLogs = await readCSV<any>("daily-task-logs.csv");
+    const rawLogs = await readCSV<Record<string, string>>("daily-task-logs.csv");
 
     // 오늘 날짜의 기존 로그 제거
     const filteredLogs = rawLogs.filter((log) => !(log.user_id === userId && log.date === today));
@@ -1353,7 +1381,7 @@ export async function resetDailyTasksForUser(userId: string, lastAccessDate: str
 /**
  * 모든 사용자의 오늘 할일 현황 조회 (관리자용)
  */
-export async function getAllUsersDailyStatus(date: string): Promise<any[]> {
+export async function getAllUsersDailyStatus(date: string): Promise<UserDailyStatus[]> {
   try {
     const users = await getAllUsers();
     const result = [];
@@ -1397,17 +1425,17 @@ export async function getAllUsersDailyStatus(date: string): Promise<any[]> {
 /**
  * 사용자 설정 조회
  */
-export async function getUserSettings(userId: string): Promise<any> {
+export async function getUserSettings(userId: string): Promise<SettingsConfig> {
   try {
-    const rawSettings = await readCSV<any>("user-settings.csv");
+    const rawSettings = await readCSV<Record<string, string>>("user-settings.csv");
     const userSettings = rawSettings.filter((s) => s.user_id === userId);
 
     // 기본값
-    const defaultSettings = {
+    const defaultSettings: SettingsConfig = {
       display: {
         dashboardColumns: 4,
-        cardSize: "medium",
-        language: "ko",
+        cardSize: "medium" as const,
+        language: "ko" as const,
       },
       dailyTasks: {
         resetTime: "00:00",
@@ -1434,7 +1462,7 @@ export async function getUserSettings(userId: string): Promise<any> {
 
       if (defaultSettings[category]) {
         // 타입 변환
-        let parsedValue: any = value;
+        let parsedValue: string | number | boolean | string[] = value;
         if (value === "true") parsedValue = true;
         else if (value === "false") parsedValue = false;
         else if (!isNaN(Number(value))) parsedValue = Number(value);
@@ -1446,7 +1474,7 @@ export async function getUserSettings(userId: string): Promise<any> {
           }
         }
 
-        (defaultSettings[category] as any)[key] = parsedValue;
+        (defaultSettings[category] as Record<string, string | number | boolean | string[]>)[key] = parsedValue;
       }
     });
 
@@ -1457,8 +1485,8 @@ export async function getUserSettings(userId: string): Promise<any> {
     return {
       display: {
         dashboardColumns: 4,
-        cardSize: "medium",
-        language: "ko",
+        cardSize: "medium" as const,
+        language: "ko" as const,
       },
       dailyTasks: {
         resetTime: "00:00",
@@ -1478,9 +1506,14 @@ export async function getUserSettings(userId: string): Promise<any> {
 /**
  * 사용자 설정 업데이트
  */
-export async function updateUserSetting(userId: string, category: string, key: string, value: any): Promise<void> {
+export async function updateUserSetting(
+  userId: string,
+  category: string,
+  key: string,
+  value: string | number | boolean | string[]
+): Promise<void> {
   try {
-    const rawSettings = await readCSV<any>("user-settings.csv");
+    const rawSettings = await readCSV<Record<string, string>>("user-settings.csv");
 
     // 기존 설정 찾기
     const existingIndex = rawSettings.findIndex(
@@ -1517,19 +1550,23 @@ export async function updateUserSetting(userId: string, category: string, key: s
 /**
  * 여러 설정 일괄 업데이트
  */
-export async function updateUserSettings(userId: string, settings: any): Promise<void> {
+export async function updateUserSettings(userId: string, settings: Partial<SettingsConfig>): Promise<void> {
   try {
-    const updates: Array<{ category: string; key: string; value: any }> = [];
+    const updates: Array<{ category: string; key: string; value: string | number | boolean | string[] }> = [];
 
     // settings 객체를 flat하게 변환
     Object.keys(settings).forEach((category) => {
-      Object.keys(settings[category]).forEach((key) => {
-        updates.push({
-          category,
-          key,
-          value: settings[category][key],
+      const categoryKey = category as keyof SettingsConfig;
+      const categorySettings = settings[categoryKey];
+      if (categorySettings) {
+        Object.keys(categorySettings).forEach((key) => {
+          updates.push({
+            category,
+            key,
+            value: categorySettings[key as keyof typeof categorySettings] as string | number | boolean | string[],
+          });
         });
-      });
+      }
     });
 
     // 각 설정 업데이트
@@ -1549,11 +1586,20 @@ export async function updateUserSettings(userId: string, settings: any): Promise
 /**
  * 사용자별 앱 설정 조회
  */
-export async function getUserAppSettings(userId: string): Promise<any[]> {
+export async function getUserAppSettings(userId: string): Promise<UserAppSetting[]> {
   try {
     await ensureDataFile("user-app-settings.csv");
-    const settings = await readCSV<any>("user-app-settings.csv");
-    return settings.filter((s) => s.user_id === userId);
+    const settings = await readCSV<Record<string, string>>("user-app-settings.csv");
+    return settings
+      .filter((s) => s.user_id === userId)
+      .map((s) => ({
+        id: s.id,
+        userId: s.user_id,
+        appId: s.app_id,
+        isVisible: s.is_visible === "true",
+        customOrder: parseInt(s.custom_order) || 0,
+        category: s.category as "public" | "dashboard" | "admin",
+      }));
   } catch (error) {
     console.error("Error getting user app settings:", error);
     return [];
@@ -1565,14 +1611,14 @@ export async function getUserAppSettings(userId: string): Promise<any[]> {
  */
 export async function updateUserAppVisibility(userId: string, appId: string, isVisible: boolean): Promise<void> {
   try {
-    const settings = await readCSV<any>("user-app-settings.csv");
+    const settings = await readCSV<Record<string, string>>("user-app-settings.csv");
     const index = settings.findIndex((s) => s.user_id === userId && s.app_id === appId);
 
     if (index !== -1) {
       settings[index].is_visible = isVisible.toString();
     } else {
       // 없으면 새로 추가
-      const apps = await readCSV<any>("apps.csv");
+      const apps = await readCSV<Record<string, string>>("apps.csv");
       const app = apps.find((a) => a.id === appId);
       if (app) {
         const maxId = settings.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
@@ -1603,7 +1649,7 @@ export async function updateUserAppOrder(
   appOrders: Array<{ appId: string; order: number }>
 ): Promise<void> {
   try {
-    const settings = await readCSV<any>("user-app-settings.csv");
+    const settings = await readCSV<Record<string, string>>("user-app-settings.csv");
 
     for (const { appId, order } of appOrders) {
       const index = settings.findIndex((s) => s.user_id === userId && s.app_id === appId && s.category === category);
@@ -1625,7 +1671,7 @@ export async function updateUserAppOrder(
  */
 export async function initializeUserAppSettings(userId: string): Promise<void> {
   try {
-    const settings = await readCSV<any>("user-app-settings.csv");
+    const settings = await readCSV<Record<string, string>>("user-app-settings.csv");
     const existingSettings = settings.filter((s) => s.user_id === userId);
 
     // 이미 설정이 있으면 스킵
@@ -1633,7 +1679,7 @@ export async function initializeUserAppSettings(userId: string): Promise<void> {
       return;
     }
 
-    const apps = await readCSV<any>("apps.csv");
+    const apps = await readCSV<Record<string, string>>("apps.csv");
     let maxId = settings.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
 
     for (const app of apps) {
@@ -1669,7 +1715,7 @@ export async function addActivityLog(
 ): Promise<void> {
   try {
     await ensureDataFile("activity-logs.csv");
-    const logs = await readCSV<any>("activity-logs.csv");
+    const logs = await readCSV<Record<string, string>>("activity-logs.csv");
     const maxId = logs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
 
     logs.push({
@@ -1691,18 +1737,21 @@ export async function addActivityLog(
 /**
  * 사용자 활동 로그 조회 (최근 N개)
  */
-export async function getActivityLogs(userId?: string | null, limit = 10): Promise<any[]> {
+export async function getActivityLogs(
+  userId?: string | null,
+  limit = 10
+): Promise<(ActivityLog & { username: string; timestamp: string })[]> {
   try {
     await ensureDataFile("activity-logs.csv");
-    const logs = await readCSV<any>("activity-logs.csv");
+    const logs = await readCSV<Record<string, string>>("activity-logs.csv");
 
     // If a userId is provided, filter to that user's logs. Otherwise (e.g. admin)
     // return logs for all users.
-    const filtered = (typeof userId === "string" && userId)
-      ? logs.filter((l) => l.user_id === userId)
-      : logs;
+    const filtered = typeof userId === "string" && userId ? logs.filter((l) => l.user_id === userId) : logs;
 
-    const sorted = filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
+    const sorted = filtered
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
 
     // Build a small user map so we can include username in the returned objects.
     const users = await getUsers();
@@ -1733,7 +1782,7 @@ export async function getActivityLogs(userId?: string | null, limit = 10): Promi
  */
 export async function updateAppGlobalStatus(appId: string, isActive: boolean): Promise<void> {
   try {
-    const apps = await readCSV<any>("apps.csv");
+    const apps = await readCSV<Record<string, string>>("apps.csv");
     const appIndex = apps.findIndex((app) => app.id === appId);
 
     if (appIndex === -1) {

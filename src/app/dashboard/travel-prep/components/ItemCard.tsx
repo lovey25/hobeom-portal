@@ -1,5 +1,5 @@
 import React from "react";
-import { TravelItem, Bag } from "@/types";
+import { TravelItem } from "@/types";
 
 interface ItemCardProps {
   item: TravelItem;

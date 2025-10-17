@@ -53,8 +53,12 @@ export async function GET(request: NextRequest) {
         users: subscribedUsers,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Admin Push Users] 오류:", error);
-    return NextResponse.json({ success: false, message: "사용자 목록 조회 중 오류가 발생했습니다" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { success: false, message: message || "사용자 목록 조회 중 오류가 발생했습니다" },
+      { status: 500 }
+    );
   }
 }

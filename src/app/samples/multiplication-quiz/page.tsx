@@ -20,11 +20,54 @@ interface QuizResult {
 
 type GameState = "setup" | "permission" | "quiz" | "result";
 
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
   }
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+  message: string;
 }
 
 export default function MultiplicationQuizPage() {
@@ -46,7 +89,7 @@ export default function MultiplicationQuizPage() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingSpeechRef = useRef<boolean>(false); // 음성 인식 처리 중 플래그
   const isListeningRef = useRef<boolean>(false); // 음성 인식 리스닝 상태 ref
@@ -283,7 +326,7 @@ export default function MultiplicationQuizPage() {
         recognitionRef.current.abort();
         setIsListening(false);
         isListeningRef.current = false;
-      } catch (e) {
+      } catch {
         // 중단 실패 무시
       }
     }
@@ -330,7 +373,7 @@ export default function MultiplicationQuizPage() {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
-    } catch (error) {
+    } catch {
       // Web Audio API를 지원하지 않는 브라우저에서는 무시
     }
   };
@@ -352,7 +395,7 @@ export default function MultiplicationQuizPage() {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
+    } catch {
       // Web Audio API를 지원하지 않는 브라우저에서는 무시
     }
   };
@@ -375,10 +418,10 @@ export default function MultiplicationQuizPage() {
         stream.getTracks().forEach((track) => track.stop()); // 즉시 스트림 정리
         setMicPermissionGranted(true);
         return true;
-      } catch (error) {
+      } catch {
         return false;
       }
-    } catch (error) {
+    } catch {
       return false;
     }
   };
@@ -547,7 +590,7 @@ export default function MultiplicationQuizPage() {
       if (speechSupported && recognitionRef.current) {
         setTimeout(() => startListening(), 100); // 음성 인식만 약간 지연
       }
-    } catch (error) {
+    } catch {
       setErrorMessage("마이크 권한이 필요합니다. 브라우저 설정에서 마이크 접근을 허용해주세요.");
       setShowTextInput(true);
       setGameState("quiz");
@@ -616,7 +659,7 @@ export default function MultiplicationQuizPage() {
       // 현재 듣고 있으면 중단
       try {
         recognitionRef.current.abort();
-      } catch (e) {
+      } catch {
         // 무시
       }
       setIsListening(false);
@@ -631,7 +674,7 @@ export default function MultiplicationQuizPage() {
       // 먼저 중단 시도 (이미 실행 중일 수 있음)
       try {
         recognitionRef.current.abort();
-      } catch (e) {
+      } catch {
         // 중단 실패는 무시 (이미 중지된 상태일 수 있음)
       }
 
@@ -640,7 +683,7 @@ export default function MultiplicationQuizPage() {
         try {
           setIsListening(true);
           isListeningRef.current = true;
-          recognitionRef.current.start();
+          recognitionRef.current?.start();
         } catch (error) {
           console.error("음성 인식 시작 오류:", error);
           setIsListening(false);

@@ -31,7 +31,7 @@ export interface PushPayload {
   data?: {
     url?: string;
     type?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   requireInteraction?: boolean;
 }
@@ -57,21 +57,19 @@ export async function sendPushNotification(
       success: true,
       message: "푸시 알림 전송 성공",
     };
-  } catch (error: any) {
-    console.error("푸시 알림 전송 실패:", error);
+  } catch (error) {
+    console.error("Web-push send error:", error);
 
-    // 구독 만료/무효화 에러 처리
-    if (error.statusCode === 410 || error.statusCode === 404) {
-      return {
-        success: false,
-        message: "구독이 만료되었습니다",
-      };
+    // narrow unknown error
+    if (error && typeof error === "object") {
+      const errObj = error as { statusCode?: number; message?: string };
+      if (errObj.statusCode === 410 || errObj.statusCode === 404) {
+        return { success: false, message: "구독이 만료되었습니다" };
+      }
+      return { success: false, message: errObj.message || "푸시 알림 전송 실패" };
     }
 
-    return {
-      success: false,
-      message: error.message || "푸시 알림 전송 실패",
-    };
+    return { success: false, message: "푸시 알림 전송 실패" };
   }
 }
 

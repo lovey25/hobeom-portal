@@ -5,7 +5,6 @@ import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useAuth } from "@/contexts/AuthContext";
 import { Spreadsheet } from "./components/Spreadsheet";
 
 interface CSVFile {

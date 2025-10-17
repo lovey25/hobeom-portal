@@ -20,7 +20,7 @@ export const cookieUtils = {
     Cookies.remove(TOKEN_KEY);
   },
 
-  setUser: (user: any) => {
+  setUser: (user: Record<string, unknown> | null) => {
     Cookies.set(USER_KEY, JSON.stringify(user), {
       expires: 7,
       sameSite: "strict",
@@ -28,9 +28,9 @@ export const cookieUtils = {
     });
   },
 
-  getUser: () => {
+  getUser: (): Record<string, unknown> | null => {
     const user = Cookies.get(USER_KEY);
-    return user ? JSON.parse(user) : null;
+    return user ? (JSON.parse(user) as Record<string, unknown>) : null;
   },
 
   removeUser: () => {

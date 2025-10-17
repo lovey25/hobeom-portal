@@ -109,11 +109,10 @@ export default function TravelPrepPage() {
       ]);
 
       const itemsData = await itemsRes.json();
-      const bagsData = await bagsRes.json();
+      await bagsRes.json(); // bagsData는 bagStats에서 사용되므로 별도 저장 불필요
       const tripsData = await tripsRes.json();
 
       if (itemsData.success) setAllTravelItems(itemsData.data);
-      // bagsData는 bagStats에서 사용되므로 별도 저장 불필요
 
       // 마지막 사용 여행이 있으면 로드
       if (tripsData.success && tripsData.data.length > 0) {

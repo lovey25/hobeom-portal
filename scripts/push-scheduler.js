@@ -132,7 +132,7 @@ try {
   try {
     require("ts-node/register");
     console.log("ℹ️ ts-node/register loaded, TypeScript requires enabled");
-  } catch (e) {
+  } catch {
     // 조용히 넘어감 - ts-node가 없으면 계속 진행
   }
   // require 시 TypeScript 파일이면 실패할 수 있으므로 안전하게 시도
@@ -292,8 +292,7 @@ async function checkAndSendNotifications() {
     // 3. 여행 목록 로드
     const tripLists = await readCSV("trip-lists.csv");
 
-    const now = new Date();
-    // const currentHour = now.getHours(); // Reserved for future time-based logic
+    // const currentHour = new Date().getHours(); // Reserved for future time-based logic
 
     // 각 구독자에 대해 체크
     for (const sub of subscriptions) {

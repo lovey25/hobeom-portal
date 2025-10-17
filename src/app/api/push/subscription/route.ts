@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import type { JwtPayload } from "jsonwebtoken";
 import { getPushSubscriptions } from "@/lib/data";
 
 export async function GET(request: NextRequest) {
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "인증이 필요합니다" }, { status: 401 });
     }
 
-    const userId = decoded.id || decoded.userId; // id 또는 userId 필드 지원
+    const decodedPayload = decoded as JwtPayload;
+    const userId = decodedPayload.id || decodedPayload.userId; // id 또는 userId 필드 지원
     console.log("[API Subscription] 사용자:", userId, "구독 상태 조회");
 
     // 현재 디바이스의 endpoint 가져오기 (Service Worker에서 조회 필요)
@@ -46,8 +48,12 @@ export async function GET(request: NextRequest) {
         })),
       },
     });
-  } catch (error: any) {
-    console.error("[API Subscription] 오류:", error);
-    return NextResponse.json({ success: false, message: "구독 상태 조회 중 오류가 발생했습니다" }, { status: 500 });
+  } catch (error) {
+    console.error("[API Subscription] error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { success: false, message: message || "구독 정보 조회 중 오류가 발생했습니다" },
+      { status: 500 }
+    );
   }
 }

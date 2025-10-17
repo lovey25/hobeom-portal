@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "./auth";
+import jwt from "jsonwebtoken";
 import { ApiResponse } from "@/types";
 
 /**
  * 토큰에서 사용자 정보 추출
  */
-export function extractUser(request: NextRequest) {
+export function extractUser(request: NextRequest): jwt.JwtPayload | null {
   const token = request.headers.get("authorization")?.replace("Bearer ", "");
   return verifyToken(token || "");
 }
@@ -13,15 +14,14 @@ export function extractUser(request: NextRequest) {
 /**
  * 인증 필요 여부 확인
  */
-export function requireAuth(request: NextRequest): { decoded: any; response: null } | { decoded: null; response: NextResponse } {
+export function requireAuth(
+  request: NextRequest
+): { decoded: jwt.JwtPayload | null; response: null } | { decoded: null; response: NextResponse } {
   const decoded = extractUser(request);
   if (!decoded) {
     return {
       decoded: null,
-      response: NextResponse.json<ApiResponse>(
-        { success: false, message: "인증이 필요합니다." },
-        { status: 401 }
-      ),
+      response: NextResponse.json<ApiResponse>({ success: false, message: "인증이 필요합니다." }, { status: 401 }),
     };
   }
   return { decoded, response: null };
@@ -30,11 +30,13 @@ export function requireAuth(request: NextRequest): { decoded: any; response: nul
 /**
  * 관리자 권한 필요 여부 확인
  */
-export function requireAdmin(request: NextRequest): { decoded: any; response: null } | { decoded: null; response: NextResponse } {
+export function requireAdmin(
+  request: NextRequest
+): { decoded: jwt.JwtPayload | null; response: null } | { decoded: null; response: NextResponse } {
   const authResult = requireAuth(request);
   if (authResult.response) return { decoded: null, response: authResult.response };
 
-  if (authResult.decoded.role !== "admin") {
+  if ((authResult.decoded as jwt.JwtPayload).role !== "admin") {
     return {
       decoded: null,
       response: NextResponse.json<ApiResponse>(

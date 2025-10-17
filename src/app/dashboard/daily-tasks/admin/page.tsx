@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { UserDailyStatus, DailyTask } from "@/types";
+import { UserDailyStatus } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
 import { Card } from "@/components/ui/Card";
 
@@ -160,7 +160,6 @@ export default function DailyTasksAdminPage() {
 
   // 완료율별 사용자 수
   const highPerformers = usersStatus.filter((u) => u.completionRate >= 80).length;
-  const mediumPerformers = usersStatus.filter((u) => u.completionRate >= 50 && u.completionRate < 80).length;
   const lowPerformers = usersStatus.filter((u) => u.completionRate < 50).length;
 
   if (isLoading) {

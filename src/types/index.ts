@@ -6,8 +6,8 @@ export interface User {
   passwordHash: string;
   role: "admin" | "user";
   createdAt: string;
-  lastLogin?: string;      // 로그인 시점
-  lastAccess?: string;     // API 호출 시점 (할일 리셋 등에 사용)
+  lastLogin?: string; // 로그인 시점
+  lastAccess?: string; // API 호출 시점 (할일 리셋 등에 사용)
 }
 
 export interface AuthResponse {
@@ -47,7 +47,7 @@ export interface DashboardConfig {
   };
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -251,6 +251,10 @@ export interface SettingsConfig {
     dailyTasksEnabled: boolean;
     travelPrepEnabled: boolean;
     emailEnabled: boolean;
+    travelNotificationDays?: number;
+    encouragementEnabled?: boolean;
+    dailyTasksReminderEnabled?: boolean;
+    dailyTasksReminderTimes?: string[];
   };
 }
 
