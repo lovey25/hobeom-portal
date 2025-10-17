@@ -95,25 +95,55 @@ async function removeSubscriptionFromCSV(endpoint) {
   }
 }
 
+// activity-logs.csv에 발송 기록 추가
+async function appendActivityLog(userId, actionType, description, appId) {
+  try {
+    const rows = await readCSV("activity-logs.csv");
+    let maxId = 0;
+    for (const r of rows) {
+      const id = parseInt(r.id, 10);
+      if (!Number.isNaN(id) && id > maxId) maxId = id;
+    }
+
+    const newId = maxId + 1;
+    const now = new Date().toISOString();
+
+    const newRow = {
+      id: String(newId),
+      user_id: String(userId || ""),
+      action_type: actionType || "push_notification",
+      action_description: description || "",
+      created_at: now,
+      app_id: appId ? String(appId) : "",
+    };
+
+    rows.push(newRow);
+    await writeCSV("activity-logs.csv", rows);
+    console.log(`📝 activity-logs 추가: id=${newId} user=${userId} type=${actionType}`);
+  } catch (err) {
+    console.error("[appendActivityLog] 실패:", err && err.message ? err.message : err);
+  }
+}
+
 // 푸시 전송: 우선 프로젝트의 sendPushNotification(reusable)을 사용하고, 실패하면 로컬 web-push fallback 사용
 // 로드 시도
 let libSendPush = null;
 try {
   // 시도: ts-node/register를 로드하면 .ts 파일을 require할 수 있음 (dev 환경)
   try {
-    require('ts-node/register');
-    console.log('ℹ️ ts-node/register loaded, TypeScript requires enabled');
+    require("ts-node/register");
+    console.log("ℹ️ ts-node/register loaded, TypeScript requires enabled");
   } catch (e) {
     // 조용히 넘어감 - ts-node가 없으면 계속 진행
   }
   // require 시 TypeScript 파일이면 실패할 수 있으므로 안전하게 시도
-  const pushLib = require(path.join(__dirname, '..', 'src', 'lib', 'push'));
+  const pushLib = require(path.join(__dirname, "..", "src", "lib", "push"));
   libSendPush = pushLib && (pushLib.sendPushNotification || pushLib.default || pushLib);
-  if (libSendPush) console.log('✅ sendPushNotification imported from src/lib/push');
+  if (libSendPush) console.log("✅ sendPushNotification imported from src/lib/push");
 } catch (e) {
   // 무시: 폴백으로 로컬 sendPushFallback 사용
   // 콘솔은 디버깅에 도움되므로 로깅
-  console.log('⚠️ sendPushNotification import 실패, 로컬 폴백 사용:', e && e.message ? e.message : e);
+  console.log("⚠️ sendPushNotification import 실패, 로컬 폴백 사용:", e && e.message ? e.message : e);
 }
 
 // 기존의 web-push 기반 구현을 폴백으로 보존
@@ -123,8 +153,12 @@ async function sendPushFallback(rawSubscription, payload) {
     endpoint: rawSubscription.endpoint,
     keys: {
       p256dh:
-        (rawSubscription.keys && rawSubscription.keys.p256dh) || rawSubscription.p256dh_key || rawSubscription.p256dh || "",
-      auth: (rawSubscription.keys && rawSubscription.keys.auth) || rawSubscription.auth_key || rawSubscription.auth || "",
+        (rawSubscription.keys && rawSubscription.keys.p256dh) ||
+        rawSubscription.p256dh_key ||
+        rawSubscription.p256dh ||
+        "",
+      auth:
+        (rawSubscription.keys && rawSubscription.keys.auth) || rawSubscription.auth_key || rawSubscription.auth || "",
     },
   };
 
@@ -163,10 +197,10 @@ async function sendPush(rawSubscription, payload) {
       // libSendPush는 sendPushNotification 인터페이스를 따름: (subscription, payload) => { success, message }
       const result = await libSendPush(rawSubscription, payload);
       // 보수적으로 반환 형태 정규화
-      if (result && typeof result.success !== 'undefined') return result;
+      if (result && typeof result.success !== "undefined") return result;
       return { success: !!result, message: result && result.message ? result.message : JSON.stringify(result) };
     } catch (err) {
-      console.error('sendPushNotification 호출 중 오류, 폴백으로 전환:', err && err.message ? err.message : err);
+      console.error("sendPushNotification 호출 중 오류, 폴백으로 전환:", err && err.message ? err.message : err);
       return await sendPushFallback(rawSubscription, payload);
     }
   }
@@ -302,8 +336,9 @@ async function checkAndSendNotifications() {
       if (notificationSettings.dailyTasksReminderEnabled) {
         const reminderTimes = notificationSettings.dailyTasksReminderTimes || [];
 
-  // 변경: 매칭된 시간을 얻음 (예: "09:00")
-  const matchedReminderTime = shouldSendReminderNow(reminderTimes);
+        // 변경: 매칭된 시간을 얻음 (예: "09:00")
+        const matchedReminderTime = shouldSendReminderNow(reminderTimes);
+        console.log(`📅 매칭된 리마인더 시간: ${matchedReminderTime}`);
 
         if (reminderTimes.length > 0 && matchedReminderTime) {
           // 오늘 이미 보냈는지 확인 (시간까지 포함한 고유 키 사용)
@@ -320,7 +355,7 @@ async function checkAndSendNotifications() {
                 title: message.title,
                 body: message.body,
                 data: {
-                  url: "/dashboard/daily-tasks",
+                  url: "/dashboard",
                   type: "daily-tasks-reminder",
                   scheduledAt: matchedReminderTime,
                   timeStamp: new Date().toISOString(),
@@ -333,8 +368,20 @@ async function checkAndSendNotifications() {
               if (result && result.success) {
                 markAsNotified(userId, notifyKey);
                 console.log(`   ✅ 전송 성공 (${usedImpl}) → ${endpointSnippet}...`);
+                // activity-logs에 기록
+                try {
+                  await appendActivityLog(
+                    userId,
+                    "push_sent",
+                    `리마인더 알림 전송(${matchedReminderTime}) - ${message.title}`,
+                    5
+                  );
+                } catch (e) {
+                  console.error("[activity-log] 리마인더 기록 실패:", e && e.message ? e.message : e);
+                }
               } else {
-                const errMsg = result && (result.message || result.error) ? (result.message || result.error) : JSON.stringify(result);
+                const errMsg =
+                  result && (result.message || result.error) ? result.message || result.error : JSON.stringify(result);
                 console.log(`   ❌ 전송 실패 → ${endpointSnippet}...: ${errMsg}`);
               }
             } catch (err) {
@@ -374,13 +421,30 @@ async function checkAndSendNotifications() {
                 if (result && result.success) {
                   markAsNotified(userId, `travel-${trip.id}`);
                   console.log(`   ✅ 전송 성공 (${usedImpl}) → ${endpointSnippet}...`);
+                  // activity-logs에 기록
+                  try {
+                    await appendActivityLog(
+                      userId,
+                      "push_sent",
+                      `여행 준비 알림 전송(${trip.name}) (D-${daysUntil})`,
+                      6
+                    );
+                  } catch (e) {
+                    console.error("[activity-log] 여행 알림 기록 실패:", e && e.message ? e.message : e);
+                  }
                 } else {
-                  const errMsg = result && (result.message || result.error) ? (result.message || result.error) : JSON.stringify(result);
+                  const errMsg =
+                    result && (result.message || result.error)
+                      ? result.message || result.error
+                      : JSON.stringify(result);
                   console.log(`   ❌ 전송 실패 → ${endpointSnippet}...: ${errMsg}`);
                 }
               } catch (err) {
                 const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
-                console.error(`   ❌ 전송 중 예외 발생 → ${endpointSnippet}...:`, err && err.message ? err.message : err);
+                console.error(
+                  `   ❌ 전송 중 예외 발생 → ${endpointSnippet}...:`,
+                  err && err.message ? err.message : err
+                );
               }
             }
           }

@@ -21,7 +21,6 @@ export const metadata: Metadata = {
   title: "호범 포털 - 포괄적인 웹 포털 서비스",
   description: "여러 기능을 통합한 현대적인 웹 포털 플랫폼",
   manifest: "/manifest.json",
-  themeColor: "#3B82F6",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
