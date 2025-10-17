@@ -10,6 +10,7 @@ import { cookieUtils } from "@/lib/cookies";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { layout, text, state } from "@/styles/design-system";
 import {
   getEncouragementMessage,
   getLastNotificationThreshold,
@@ -281,12 +282,12 @@ export default function DailyTasksPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className={layout.page}>
+          <div className={layout.container}>
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
+                <p className={state.loading}>로딩 중...</p>
               </div>
             </div>
           </div>
@@ -297,13 +298,13 @@ export default function DailyTasksPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className={layout.page}>
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
           {/* 헤더 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">📋 오늘의 할일 관리</h1>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base">매일 해야 할 일들을 등록하고 관리하세요</p>
+              <h1 className={text.pageTitle}>📋 오늘의 할일 관리</h1>
+              <p className={text.description}>매일 해야 할 일들을 등록하고 관리하세요</p>
             </div>
             <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
               + 할일 추가

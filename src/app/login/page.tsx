@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { layout, state, text } from "@/styles/design-system";
 
 export default function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,10 +26,10 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`${layout.page} flex items-center justify-center`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">로딩 중...</p>
+          <p className={state.loading}>로딩 중...</p>
         </div>
       </div>
     );
@@ -43,8 +44,8 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <LoginForm />
 
-        <div className="text-center text-sm text-gray-600">
-          <p>
+        <div className="text-center">
+          <p className={text.tertiary}>
             테스트 계정: <span className="font-mono bg-gray-100 px-2 py-1 rounded">admin / password</span>
           </p>
         </div>

@@ -1,21 +1,20 @@
 import React from "react";
+import { card, cn } from "@/styles/design-system";
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  padding?: "sm" | "md" | "lg";
+  padding?: "sm" | "md" | "lg" | "none";
+  hover?: boolean;
 }
 
-export function Card({ children, className = "", padding = "md" }: CardProps) {
+export function Card({ children, className = "", padding = "md", hover = false }: CardProps) {
   const paddingClasses = {
-    sm: "p-4",
-    md: "p-6",
-    lg: "p-8",
+    sm: card.paddingSmall,
+    md: card.padding,
+    lg: card.paddingLarge,
+    none: "",
   };
 
-  return (
-    <div className={`bg-white rounded-lg border border-gray-200 shadow-sm ${paddingClasses[padding]} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={cn(card.base, paddingClasses[padding], hover && card.hover, className)}>{children}</div>;
 }

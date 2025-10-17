@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AppIcon } from "@/types";
 import { cookieUtils } from "@/lib/cookies";
+import { layout, text, state } from "@/styles/design-system";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -157,12 +158,12 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className={layout.page}>
+          <div className={layout.container}>
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
+                <p className={state.loading}>로딩 중...</p>
               </div>
             </div>
           </div>
@@ -173,8 +174,8 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={layout.page}>
+        <main className={layout.container}>
           {/* Welcome Section */}
           <div className="mb-8">
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
@@ -207,7 +208,7 @@ export default function DashboardPage() {
           {/* Recent Activity */}
           <div className="mt-8">
             <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 최근 활동</h3>
+              <h3 className={text.cardTitle}>📋 최근 활동</h3>
               {activityLogs.length > 0 ? (
                 <div className="space-y-3">
                   {activityLogs.map((log) => (
@@ -225,13 +226,13 @@ export default function DashboardPage() {
                             : "bg-gray-400"
                         }`}
                       ></div>
-                      <span className="text-gray-600">{getTimeAgo(log.createdAt)}</span>
-                      <span>{log.actionDescription}</span>
+                      <span className={text.tertiary}>{getTimeAgo(log.createdAt)}</span>
+                      <span className={text.body}>{log.actionDescription}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">최근 활동이 없습니다.</p>
+                <p className={state.empty}>최근 활동이 없습니다.</p>
               )}
             </Card>
           </div>

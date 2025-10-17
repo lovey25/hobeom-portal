@@ -98,6 +98,8 @@ src/
 │   ├── common/           # 공통 컴포넌트 (ProtectedRoute, LoadingSpinner 등)
 │   └── ui/               # UI 컴포넌트
 ├── contexts/             # React 컨텍스트
+├── styles/               # 🎨 디자인 시스템
+│   └── design-system.ts  # 중앙 집중식 스타일 관리
 ├── lib/                  # 유틸리티 함수
 │   ├── apiHelpers.ts     # API 헬퍼 함수
 │   └── data.ts           # 데이터 처리 함수
@@ -161,15 +163,32 @@ npm run push-scheduler
 - 관리자: `admin / password`
 - 일반 사용자: `user1 / password`, `demo / password`
 
-## �🔧 확장하기
+## 🔧 확장하기
 
-새로운 앱 추가 5단계:
+### 새로운 앱 추가 5단계
 
 1. `data/apps.csv`에 앱 메타데이터 추가
 2. `src/app/{samples|dashboard}/[app-name]/page.tsx` 생성
 3. (필요 시) `src/app/api/[api-name]/route.ts` API 엔드포인트 추가
 4. 앱 폴더에 `README.md` 개발자 문서 작성
 5. 데이터 저장이 필요하면 `data/[table].csv` + `data.ts` 함수 추가
+
+### 🎨 디자인 시스템 사용
+
+모든 스타일을 중앙에서 관리하는 디자인 시스템이 적용되어 있습니다:
+
+```typescript
+import { layout, text, card, table, cn } from "@/styles/design-system";
+
+<div className={layout.page}>
+  <main className={layout.container}>
+    <h1 className={text.pageTitle}>제목</h1>
+    <div className={cn(card.statBlue, "custom-class")}>통계</div>
+  </main>
+</div>;
+```
+
+📖 **상세 가이드:** [디자인 시스템 문서](docs/design-system.md)
 
 ## 📝 최근 업데이트
 

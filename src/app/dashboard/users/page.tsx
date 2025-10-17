@@ -6,6 +6,7 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { User } from "@/types";
+import { layout, text, table, state } from "@/styles/design-system";
 
 export default function UsersPage() {
   const { setPageTitle } = usePageTitle();
@@ -167,58 +168,46 @@ export default function UsersPage() {
 
   return (
     <ProtectedRoute requiredRole="admin">
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className={layout.page}>
+        <div className={layout.container}>
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">로딩 중...</p>
+              <p className={state.loading}>로딩 중...</p>
             </div>
           )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-              <p className="text-red-800">{error}</p>
+              <p className={text.error}>{error}</p>
             </div>
           )}
 
           {!loading && !error && (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+            <Card padding="none">
+              <div className={table.container}>
+                <table className={table.base}>
+                  <thead className={table.thead}>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        사용자
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        이메일
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        권한
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        가입일
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        마지막 접속
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        역할
-                      </th>
+                      <th className={table.th}>사용자</th>
+                      <th className={table.th}>이메일</th>
+                      <th className={table.th}>권한</th>
+                      <th className={table.th}>가입일</th>
+                      <th className={table.th}>마지막 접속</th>
+                      <th className={table.th}>역할</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className={table.tbody}>
                     {users.map((user) => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <tr key={user.id} className={table.tr}>
+                        <td className={table.td}>
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+                            <div className={table.tdPrimary}>{user.name}</div>
+                            <div className={table.tdSecondary}>@{user.username}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className={table.tdPrimary}>{user.email}</td>
+                        <td className={table.td}>
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               user.role === "admin" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
@@ -227,15 +216,13 @@ export default function UsersPage() {
                             {user.role === "admin" ? "관리자" : "사용자"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(user.createdAt).toLocaleDateString("ko-KR")}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className={table.td}>{new Date(user.createdAt).toLocaleDateString("ko-KR")}</td>
+                        <td className={table.td}>
                           {user.lastAccess
                             ? `${new Date(user.lastAccess).toLocaleString("ko-KR")} (로컬)`
                             : "접속 기록 없음"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className={table.td}>
                           <div className="flex space-x-2">
                             <select
                               value={user.role}

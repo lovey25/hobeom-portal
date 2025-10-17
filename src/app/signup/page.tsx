@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { layout, text } from "@/styles/design-system";
 
 export default function SignupPage() {
   const { setPageTitle } = usePageTitle();
@@ -93,13 +94,13 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className={`${layout.page} flex flex-col justify-center py-12 sm:px-6 lg:px-8`}>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card padding="lg">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <p className="text-red-800 text-sm">{error}</p>
+                <p className={text.error}>{error}</p>
               </div>
             )}
 
@@ -116,9 +117,7 @@ export default function SignupPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-green-800 text-sm">
-                      🎉 회원가입이 완료되었습니다! 3초 후 홈페이지로 이동합니다.
-                    </p>
+                    <p className={text.success}>🎉 회원가입이 완료되었습니다! 3초 후 홈페이지로 이동합니다.</p>
                   </div>
                 </div>
               </div>

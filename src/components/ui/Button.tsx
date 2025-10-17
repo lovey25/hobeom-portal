@@ -1,29 +1,39 @@
 import React from "react";
+import { button, cn } from "@/styles/design-system";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline";
+  variant?: "primary" | "secondary" | "danger" | "ghost";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
 
-export function Button({ variant = "primary", size = "md", className = "", children, ...props }: ButtonProps) {
-  const baseStyles =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
-
+export function Button({
+  variant = "primary",
+  size = "md",
+  className = "",
+  children,
+  disabled,
+  ...props
+}: ButtonProps) {
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
-    secondary: "bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500",
-    outline: "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 focus:ring-blue-500",
+    primary: button.primary,
+    secondary: button.secondary,
+    danger: button.danger,
+    ghost: button.ghost,
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-sm",
-    lg: "px-6 py-3 text-base",
+    sm: button.small,
+    md: button.medium,
+    lg: button.large,
   };
 
   return (
-    <button className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
+    <button
+      className={cn(button.base, variants[variant], sizes[size], disabled && button.disabled, className)}
+      disabled={disabled}
+      {...props}
+    >
       {children}
     </button>
   );

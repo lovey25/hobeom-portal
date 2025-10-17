@@ -6,6 +6,7 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { cookieUtils } from "@/lib/cookies";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { layout, text, table, state } from "@/styles/design-system";
 
 export default function SystemLogsPage() {
   const { setPageTitle } = usePageTitle();
@@ -42,52 +43,60 @@ export default function SystemLogsPage() {
 
   return (
     <ProtectedRoute requiredRole="admin">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold">시스템 로그</h1>
-            <p className="text-sm text-gray-500">서버 및 사용자 활동 로그를 확인합니다.</p>
-          </div>
-          <div>
-            <Button onClick={loadLogs}>새로고침</Button>
-          </div>
-        </div>
-
-        <Card>
-          {isLoading ? (
-            <div className="p-6 text-center">로딩 중...</div>
-          ) : error ? (
-            <div className="p-6 text-red-600">{error}</div>
-          ) : logs.length === 0 ? (
-            <div className="p-6">로그가 없습니다.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm divide-y">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left">시간</th>
-                    <th className="px-4 py-2 text-left">사용자</th>
-                    <th className="px-4 py-2 text-left">행동</th>
-                    <th className="px-4 py-2 text-left">설명</th>
-                    <th className="px-4 py-2 text-left">앱</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {logs.map((l: any) => (
-                    <tr key={l.id} className="even:bg-white odd:bg-gray-50">
-                      <td className="px-4 py-2">{new Date(l.timestamp).toLocaleString()}</td>
-                      <td className="px-4 py-2">{l.username || l.user || l.user_id || "-"}</td>
-                      <td className="px-4 py-2">{l.actionType}</td>
-                      <td className="px-4 py-2">{l.actionDescription}</td>
-                      <td className="px-4 py-2">{l.appId || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <div className={layout.page}>
+        <main className={layout.container}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className={text.pageTitle}>시스템 로그</h1>
+              <p className={text.description}>서버 및 사용자 활동 로그를 확인합니다</p>
             </div>
-          )}
-        </Card>
-      </main>
+            <div>
+              <Button onClick={loadLogs}>새로고침</Button>
+            </div>
+          </div>
+
+          <Card padding="none">
+            {isLoading ? (
+              <div className="p-6">
+                <p className={state.loading}>로딩 중...</p>
+              </div>
+            ) : error ? (
+              <div className="p-6">
+                <p className={state.error}>{error}</p>
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="p-6">
+                <p className={state.empty}>로그가 없습니다.</p>
+              </div>
+            ) : (
+              <div className={table.container}>
+                <table className={table.base}>
+                  <thead className={table.thead}>
+                    <tr>
+                      <th className={table.th}>시간</th>
+                      <th className={table.th}>사용자</th>
+                      <th className={table.th}>행동</th>
+                      <th className={table.th}>설명</th>
+                      <th className={table.th}>앱</th>
+                    </tr>
+                  </thead>
+                  <tbody className={table.tbody}>
+                    {logs.map((l: any) => (
+                      <tr key={l.id} className={table.tr}>
+                        <td className={table.td}>{new Date(l.timestamp).toLocaleString()}</td>
+                        <td className={table.tdPrimary}>{l.username || l.user || l.user_id || "-"}</td>
+                        <td className={table.tdPrimary}>{l.actionType}</td>
+                        <td className={table.td}>{l.actionDescription}</td>
+                        <td className={table.tdSecondary}>{l.appId || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </main>
+      </div>
     </ProtectedRoute>
   );
 }
