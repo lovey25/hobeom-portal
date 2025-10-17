@@ -12,7 +12,6 @@ import { Bag } from "@/types";
 function BagsSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
 
   const [bags, setBags] = useState<Bag[]>([]);

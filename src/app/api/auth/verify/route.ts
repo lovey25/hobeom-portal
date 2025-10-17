@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractUser, successResponse, errorResponse } from "@/lib/apiHelpers";
+import { extractUser } from "@/lib/apiHelpers";
 import { getUserByUsername } from "@/lib/data";
 import { AuthResponse } from "@/types";
 
@@ -23,12 +23,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 비밀번호 해시는 응답에서 제거
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
       success: true,
       message: "토큰이 유효합니다.",
-      user: userWithoutPassword as any,
+      user: userWithoutPassword,
     };
 
     return NextResponse.json(response);

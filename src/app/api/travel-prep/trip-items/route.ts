@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getTripItems,
   addTripItem,
-  addTripItemsBatch,
   updateTripItem,
   deleteTripItem,
-  calculateBagStats,
 } from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";

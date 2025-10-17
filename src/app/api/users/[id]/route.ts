@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllUsers, updateUser, deleteUser } from "@/lib/data";
+import { updateUser, deleteUser } from "@/lib/data";
+import bcrypt from "bcryptjs";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
 
@@ -29,8 +30,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (passwordReset) {
       // 비밀번호 초기화: 기본 비밀번호 "password"로 설정
-      const bcrypt = require("bcryptjs");
-      const hashedPassword = await bcrypt.hash("password", 10);
+  const hashedPassword = await bcrypt.hash("password", 10);
       await updateUser(userId, { passwordHash: hashedPassword });
 
       const response: ApiResponse = {

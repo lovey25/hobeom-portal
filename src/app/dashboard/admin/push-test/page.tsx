@@ -139,7 +139,7 @@ export default function AdminPushTestPage() {
     }
   };
 
-  const selectedUser = users.find((u) => u.id === selectedUserId);
+  // const selectedUser = users.find((u) => u.id === selectedUserId); // Reserved for future UI display
 
   return (
     <ProtectedRoute requiredRole="admin">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/auth";
 import { getUserByUsername, updateUserLastLogin } from "@/lib/data";
-import { ApiResponse, AuthResponse } from "@/types";
+import { AuthResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     const updatedUser = await getUserByUsername(username);
 
     // 비밀번호 해시는 응답에서 제거
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...userWithoutPassword } = updatedUser || user;
 
     const response: AuthResponse = {

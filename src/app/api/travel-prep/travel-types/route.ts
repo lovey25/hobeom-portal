@@ -6,7 +6,7 @@ import { ApiResponse } from "@/types";
  * GET /api/travel-prep/travel-types
  * 여행 종류 템플릿 목록 조회
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const travelTypes = await getTravelTypes();
 

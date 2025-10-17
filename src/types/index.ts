@@ -13,7 +13,7 @@ export interface User {
 export interface AuthResponse {
   success: boolean;
   message: string;
-  user?: User;
+  user?: Omit<User, "passwordHash">;
   token?: string;
 }
 
@@ -108,6 +108,7 @@ export interface TripList {
   id: string;
   userId: string;
   travelTypeId?: string; // TravelTypeTemplate 참조 (선택사항)
+  startDate?: string;
   name: string;
   days: number;
   type: TravelType;

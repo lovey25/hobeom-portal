@@ -983,7 +983,7 @@ export default function MultiplicationQuizPage() {
                         <p className="text-sm sm:text-base text-gray-500 text-center">
                           한국어 숫자(일, 이, 삼...) 또는 아라비아 숫자로 말해주세요
                           <br />
-                          예시: "십이", "열둘", "12", "스물넷", "24"
+                          예시: &quot;십이&quot;, &quot;열둘&quot;, &quot;12&quot;, &quot;스물넷&quot;, &quot;24&quot;
                         </p>
                       )}
                       {isListening && (

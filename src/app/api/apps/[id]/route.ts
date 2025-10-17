@@ -3,10 +3,10 @@ import { updateAppGlobalStatus } from "@/lib/data";
 import { verifyToken } from "@/lib/auth";
 import { ApiResponse } from "@/types";
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "");
-    const decoded = verifyToken(token || "");
+  const token = request.headers.get("authorization")?.replace("Bearer ", "");
+  const decoded = verifyToken(token || "");
 
     if (!decoded) {
       const response: ApiResponse = {
@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(response, { status: 400 });
     }
 
-    const appId = params.id;
+  const { id: appId } = await params;
     await updateAppGlobalStatus(appId, isActive);
 
     const response: ApiResponse = {

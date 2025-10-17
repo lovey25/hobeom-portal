@@ -22,7 +22,6 @@ interface CSVData {
 }
 
 export default function CSVEditorPage() {
-  const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
   const [files, setFiles] = useState<CSVFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);

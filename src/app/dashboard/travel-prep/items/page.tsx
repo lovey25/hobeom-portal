@@ -13,7 +13,6 @@ import { TravelItem } from "@/types";
 function ItemsSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
   const { setPageTitle } = usePageTitle();
 
   const [items, setItems] = useState<TravelItem[]>([]);

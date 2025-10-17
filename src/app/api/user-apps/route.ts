@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { getUserAppSettings, updateUserAppVisibility, updateUserAppOrder } from "@/lib/data";
+import { getUserAppSettings, updateUserAppVisibility } from "@/lib/data";
 
 /**
  * GET /api/user-apps - 사용자별 앱 설정 조회

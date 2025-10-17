@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
-import { Card } from "@/components/ui/Card";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/Button";
 
 interface SpreadsheetProps {
@@ -19,7 +18,7 @@ export function Spreadsheet({
   onCancel,
   filename,
 }: SpreadsheetProps) {
-  const [headers, setHeaders] = useState<string[]>(initialHeaders);
+  const [headers] = useState<string[]>(initialHeaders);
   const [data, setData] = useState<Record<string, any>[]>(initialData);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);

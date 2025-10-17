@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { createUser, getUserByUsername, getUserByEmail, initializeUserAppSettings } from "@/lib/data";
 import { ApiResponse } from "@/types";
 
@@ -54,16 +53,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 409 });
     }
 
-    // 비밀번호 해시화
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // 새 사용자 생성
+    // 새 사용자 생성 (createUser 내부에서 해시화 수행)
     const newUser = await createUser({
       username,
       email,
       name,
-      passwordHash,
-      role: "user", // 기본적으로 일반 사용자로 생성
+      password,
+      role: "user",
     });
 
     // 사용자 앱 설정 초기화

@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "10");
 
-    const logs = await getActivityLogs(decoded.id, limit);
+  // If requester is admin, allow fetching all logs by passing undefined userId
+  const logs = decoded.role === "admin" ? await getActivityLogs(undefined, limit) : await getActivityLogs(decoded.id, limit);
 
     return NextResponse.json({
       success: true,

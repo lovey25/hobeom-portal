@@ -1691,21 +1691,31 @@ export async function addActivityLog(
 /**
  * 사용자 활동 로그 조회 (최근 N개)
  */
-export async function getActivityLogs(userId: string, limit = 10): Promise<any[]> {
+export async function getActivityLogs(userId?: string | null, limit = 10): Promise<any[]> {
   try {
     await ensureDataFile("activity-logs.csv");
     const logs = await readCSV<any>("activity-logs.csv");
-    const userLogs = logs
-      .filter((l) => l.user_id === userId)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, limit);
 
-    return userLogs.map((log) => ({
+    // If a userId is provided, filter to that user's logs. Otherwise (e.g. admin)
+    // return logs for all users.
+    const filtered = (typeof userId === "string" && userId)
+      ? logs.filter((l) => l.user_id === userId)
+      : logs;
+
+    const sorted = filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
+
+    // Build a small user map so we can include username in the returned objects.
+    const users = await getUsers();
+    const userMap = new Map(users.map((u) => [u.id, u.username]));
+
+    return sorted.map((log) => ({
       id: log.id,
       userId: log.user_id,
+      username: userMap.get(log.user_id) || log.user_id,
       actionType: log.action_type,
       actionDescription: log.action_description,
       createdAt: log.created_at,
+      timestamp: log.created_at,
       appId: log.app_id,
     }));
   } catch (error) {

@@ -41,7 +41,30 @@ export default function SettingsPage() {
   const { setPageTitle } = usePageTitle();
   const { permission, isSupported, requestPermission, sendNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const defaultSettings: Settings = {
+    display: {
+      dashboardColumns: 4,
+      cardSize: "medium",
+      language: "ko",
+    },
+    dailyTasks: {
+      resetTime: "00:00",
+      excludeWeekends: false,
+      statsPeriod: 7,
+      completionGoal: 3,
+    },
+    notifications: {
+      dailyTasksEnabled: true,
+      travelPrepEnabled: true,
+      emailEnabled: false,
+      travelNotificationDays: 3,
+      encouragementEnabled: true,
+      dailyTasksReminderEnabled: false,
+      dailyTasksReminderTimes: [],
+    },
+  };
+
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [testingNotification, setTestingNotification] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -88,8 +111,11 @@ export default function SettingsPage() {
       });
 
       const result = await response.json();
-      if (result.success) {
+      if (result.success && result.data) {
         setSettings(result.data);
+      } else {
+        // keep default settings if API fails or returns no data
+        setSettings(defaultSettings);
       }
     } catch (error) {
       console.error("Failed to fetch settings:", error);
@@ -1115,7 +1141,7 @@ export default function SettingsPage() {
                           ⚠️ <b>중요:</b> 구독 후에도 브라우저는 실행 중이어야 합니다. 브라우저가 완전히 꺼지면 알림을
                           받을 수 없습니다.
                           <br />
-                          💡 <b>해결책:</b> 위의 "2️⃣ 앱으로 설치"를 통해 PWA로 설치하면 브라우저 종료와 무관하게 알림을
+                          💡 <b>해결책:</b> 위의 &quot;2️⃣ 앱으로 설치&quot;를 통해 PWA로 설치하면 브라우저 종료와 무관하게 알림을
                           받을 수 있습니다 (모바일 권장)
                         </div>
                       </div>

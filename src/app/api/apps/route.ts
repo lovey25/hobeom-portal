@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getAppsByCategory, getAllApps } from "@/lib/data";
 import { extractUser, successResponse, errorResponse } from "@/lib/apiHelpers";
-import { ApiResponse } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {

@@ -233,7 +233,7 @@ export default function TravelPrepPage() {
           const travelItem = allTravelItems.find((ti) => ti.id === itemId);
           if (travelItem) {
             const daysLeft = Math.ceil(
-              (new Date(currentTrip!.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+              (new Date(currentTrip!.startDate!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
             );
             await notifyTravelItem(
               `"${travelItem.name}" 준비 완료! (D-${daysLeft})`,

@@ -164,13 +164,13 @@ export function PWAInstallButton() {
           <div className="font-medium text-blue-600">📱 iOS/iPadOS Safari:</div>
           <ol className="list-decimal list-inside space-y-1 text-[11px]">
             <li>Safari 브라우저에서 이 페이지를 엽니다</li>
-            <li>
+              <li>
               하단 중앙의 <b className="text-blue-600">공유 버튼 (⎋)</b>을 탭합니다
             </li>
             <li>
-              스크롤하여 <b className="text-blue-600">"홈 화면에 추가"</b>를 선택합니다
+              스크롤하여 <b className="text-blue-600">&quot;홈 화면에 추가&quot;</b>를 선택합니다
             </li>
-            <li>오른쪽 상단의 "추가" 버튼을 탭합니다</li>
+            <li>오른쪽 상단의 &quot;추가&quot; 버튼을 탭합니다</li>
           </ol>
         </div>
       );
@@ -182,14 +182,14 @@ export function PWAInstallButton() {
           <div className="space-y-2">
             <div className="font-medium text-blue-600">🤖 Android Chrome/Samsung:</div>
             <ol className="list-decimal list-inside space-y-1 text-[11px]">
-              <li>
+                <li>
                 주소창 오른쪽의 <b className="text-blue-600">점 3개 메뉴 (⋮)</b>를 탭합니다
               </li>
               <li>
-                <b className="text-blue-600">"앱 설치"</b> 또는 <b className="text-blue-600">"홈 화면에 추가"</b>를
+                <b className="text-blue-600">&quot;앱 설치&quot;</b> 또는 <b className="text-blue-600">&quot;홈 화면에 추가&quot;</b>를
                 선택합니다
               </li>
-              <li>"설치" 버튼을 탭합니다</li>
+              <li>&quot;설치&quot; 버튼을 탭합니다</li>
             </ol>
             <div className="text-[10px] text-amber-600 mt-2">💡 주소창에 설치 아이콘이 보이면 바로 탭하셔도 됩니다</div>
           </div>
@@ -203,13 +203,13 @@ export function PWAInstallButton() {
         <div className="space-y-2">
           <div className="font-medium text-blue-600">🖥️ Desktop {browser === "chrome" ? "Chrome" : "Edge"}:</div>
           <ol className="list-decimal list-inside space-y-1 text-[11px]">
-            <li>
+              <li>
               주소창 오른쪽의 <b className="text-blue-600">설치 아이콘 (⊕)</b>을 클릭합니다
               <br />
               <span className="text-gray-500 text-[10px]">(아이콘이 없으면 아래 2번 방법 시도)</span>
             </li>
             <li>
-              또는 오른쪽 상단 <b className="text-blue-600">점 3개 메뉴 (⋮)</b> → <b>"앱 설치"</b> 클릭
+              또는 오른쪽 상단 <b className="text-blue-600">점 3개 메뉴 (⋮)</b> → <b>&quot;앱 설치&quot;</b> 클릭
             </li>
           </ol>
         </div>

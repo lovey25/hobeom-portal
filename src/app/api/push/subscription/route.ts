@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { getPushSubscriptions, getPushSubscriptionByEndpoint } from "@/lib/data";
+import { getPushSubscriptions } from "@/lib/data";
 
 export async function GET(request: NextRequest) {
   try {

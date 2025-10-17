@@ -1,11 +1,11 @@
 // Service Worker for Push Notifications
 // 호범 포털 알림 서비스
 
-const CACHE_NAME = "hobeom-portal-v1";
+// const CACHE_NAME = "hobeom-portal-v1"; // Reserved for future caching strategy
 const NOTIFICATION_TAG_PREFIX = "hobeom-notification-";
 
 // Service Worker 설치
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   console.log("[SW] Service Worker installing...");
   // 즉시 활성화
   self.skipWaiting();
@@ -135,7 +135,7 @@ self.addEventListener("push", (event) => {
 });
 
 // Fetch 이벤트 (선택 사항 - 오프라인 지원)
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", () => {
   // 현재는 네트워크 우선 전략 사용
   // 향후 캐싱 전략 추가 가능
 });

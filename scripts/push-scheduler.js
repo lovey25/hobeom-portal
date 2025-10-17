@@ -17,7 +17,6 @@ const path = require("path");
 const fs = require("fs");
 const csvParser = require("csv-parser");
 const webpush = require("web-push");
-const { timeStamp } = require("console");
 
 // 환경 변수 로드
 require("dotenv").config({ path: path.join(__dirname, "..", ".env.local") });
@@ -294,7 +293,7 @@ async function checkAndSendNotifications() {
     const tripLists = await readCSV("trip-lists.csv");
 
     const now = new Date();
-    const currentHour = now.getHours();
+    // const currentHour = now.getHours(); // Reserved for future time-based logic
 
     // 각 구독자에 대해 체크
     for (const sub of subscriptions) {
@@ -322,7 +321,7 @@ async function checkAndSendNotifications() {
         if (row.key === "dailyTasksReminderTimes") {
           try {
             notificationSettings[row.key] = JSON.parse(row.value);
-          } catch (error) {
+          } catch {
             notificationSettings[row.key] = [];
           }
         } else if (row.key === "travelNotificationDays") {

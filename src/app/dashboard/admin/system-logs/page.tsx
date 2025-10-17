@@ -33,7 +33,7 @@ export default function SystemLogsPage() {
       } else {
         setError(data.message || "로그를 불러오는 데 실패했습니다.");
       }
-    } catch (e) {
+    } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
