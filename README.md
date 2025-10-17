@@ -95,8 +95,12 @@ src/
 │   ├── samples/          # 퍼블릭 샘플 앱들 (+ README.md)
 │   └── page.tsx          # 랜딩 페이지
 ├── components/           # 재사용 컴포넌트
+│   ├── common/           # 공통 컴포넌트 (ProtectedRoute, LoadingSpinner 등)
+│   └── ui/               # UI 컴포넌트
 ├── contexts/             # React 컨텍스트
 ├── lib/                  # 유틸리티 함수
+│   ├── apiHelpers.ts     # API 헬퍼 함수
+│   └── data.ts           # 데이터 처리 함수
 └── types/                # TypeScript 타입 정의
 
 data/                     # CSV 데이터 파일

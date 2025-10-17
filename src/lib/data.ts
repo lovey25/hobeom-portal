@@ -79,55 +79,64 @@ export async function writeCSV<T extends Record<string, any>>(filename: string, 
   fs.writeFileSync(filepath, csvContent, "utf-8");
 }
 
+// Utility function to map raw user data to User type
+function mapRawUser(rawUser: any): User {
+  return {
+    id: rawUser.id,
+    username: rawUser.username,
+    email: rawUser.email,
+    name: rawUser.name,
+    passwordHash: rawUser.passwordHash || rawUser.password_hash,
+    role: (rawUser.role as "admin" | "user") || "user",
+    createdAt: rawUser.createdAt || rawUser.created_at,
+    lastLogin: rawUser.lastLogin || rawUser.last_login,
+    lastAccess: rawUser.lastAccess || rawUser.last_access,
+  };
+}
+
+// Utility function to map raw travel item data
+function mapRawTravelItem(item: any): TravelItem {
+  return {
+    id: item.id,
+    name: item.name,
+    width: parseFloat(item.width),
+    height: parseFloat(item.height),
+    depth: parseFloat(item.depth),
+    weight: parseFloat(item.weight),
+    category: item.category,
+    importance: parseInt(item.importance),
+    isActive: item.is_active === "true",
+  };
+}
+
+// Utility function to map raw bag data
+function mapRawBag(bag: any): Bag {
+  return {
+    id: bag.id,
+    name: bag.name,
+    width: parseFloat(bag.width),
+    height: parseFloat(bag.height),
+    depth: parseFloat(bag.depth),
+    weight: parseFloat(bag.weight),
+    isActive: bag.is_active === "true",
+  };
+}
+
 export async function getUsers(): Promise<User[]> {
   const rawUsers = await readCSV("users.csv");
-
-  return rawUsers.map((user: any) => ({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    name: user.name,
-    passwordHash: user.passwordHash || user.password_hash,
-    role: (user.role as "admin" | "user") || "user",
-    createdAt: user.createdAt || user.created_at,
-    lastLogin: user.lastLogin || user.last_login,
-    lastAccess: user.lastAccess || user.last_access,
-  }));
+  return rawUsers.map(mapRawUser);
 }
 
 export async function getUsersWithoutPassword(): Promise<Omit<User, "passwordHash">[]> {
   const rawUsers = await readCSV("users.csv");
-
-  return rawUsers.map((user: any) => ({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    name: user.name,
-    role: (user.role as "admin" | "user") || "user",
-    createdAt: user.createdAt || user.created_at,
-    lastLogin: user.lastLogin || user.last_login,
-    lastAccess: user.lastAccess || user.last_access,
-  }));
+  return rawUsers.map(mapRawUser).map(({ passwordHash, ...user }) => user);
 }
 
 export async function getUserByUsername(username: string): Promise<(User & { passwordHash: string }) | null> {
   try {
     const rawUsers = await readCSV<any>("users.csv");
     const user = rawUsers.find((u) => u.username === username);
-
-    if (!user) return null;
-
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      role: user.role as "admin" | "user",
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin || undefined,
-      lastAccess: user.lastAccess || undefined,
-      passwordHash: user.passwordHash,
-    };
+    return user ? mapRawUser(user) : null;
   } catch (error) {
     console.error("Error reading user:", error);
     return null;
@@ -160,39 +169,11 @@ export async function getAppsByCategory(category: "public" | "dashboard" | "admi
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  try {
-    const rawUsers = await readCSV<any>("users.csv");
-    return rawUsers.map((user) => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      role: user.role as "admin" | "user",
-      passwordHash: user.passwordHash,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin || undefined,
-      lastAccess: user.lastAccess || undefined,
-    }));
-  } catch (error) {
-    console.error("Error reading all users:", error);
-    return [];
-  }
+  return getUsers();
 }
 
 export async function getAllUsersWithStats(): Promise<User[]> {
-  const rawUsers = await readCSV("users.csv");
-
-  return rawUsers.map((user: any) => ({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    name: user.name,
-    passwordHash: user.passwordHash || user.password_hash,
-    role: (user.role as "admin" | "user") || "user",
-    createdAt: user.createdAt || user.created_at,
-    lastLogin: user.lastLogin || user.last_login,
-    lastAccess: user.lastAccess || user.last_access,
-  }));
+  return getUsers();
 }
 
 export async function updateUser(userId: string, updates: Partial<User>): Promise<void> {
@@ -245,20 +226,7 @@ export async function getUserByEmail(email: string): Promise<(User & { passwordH
   try {
     const rawUsers = await readCSV<any>("users.csv");
     const user = rawUsers.find((u) => u.email === email);
-
-    if (!user) return null;
-
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      role: user.role as "admin" | "user",
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin || undefined,
-      lastAccess: user.lastAccess || undefined,
-      passwordHash: user.passwordHash,
-    };
+    return user ? mapRawUser(user) : null;
   } catch (error) {
     console.error("Error reading user by email:", error);
     return null;
@@ -366,17 +334,7 @@ export async function getTravelTypes(): Promise<TravelTypeTemplate[]> {
 export async function getTravelItems(activeOnly = true): Promise<TravelItem[]> {
   try {
     const rawItems = await readCSV<any>("travel-items.csv");
-    const items = rawItems.map((item) => ({
-      id: item.id,
-      name: item.name,
-      width: parseFloat(item.width),
-      height: parseFloat(item.height),
-      depth: parseFloat(item.depth),
-      weight: parseFloat(item.weight),
-      category: item.category,
-      importance: parseInt(item.importance),
-      isActive: item.is_active === "true",
-    }));
+    const items = rawItems.map(mapRawTravelItem);
     return activeOnly ? items.filter((item) => item.isActive) : items;
   } catch (error) {
     console.error("Error reading travel items:", error);
@@ -499,15 +457,7 @@ export async function deleteTravelItem(itemId: string): Promise<void> {
 export async function getBags(activeOnly = true): Promise<Bag[]> {
   try {
     const rawBags = await readCSV<any>("bags.csv");
-    const bags = rawBags.map((bag) => ({
-      id: bag.id,
-      name: bag.name,
-      width: parseFloat(bag.width),
-      height: parseFloat(bag.height),
-      depth: parseFloat(bag.depth),
-      weight: parseFloat(bag.weight),
-      isActive: bag.is_active === "true",
-    }));
+    const bags = rawBags.map(mapRawBag);
     return activeOnly ? bags.filter((bag) => bag.isActive) : bags;
   } catch (error) {
     console.error("Error reading bags:", error);

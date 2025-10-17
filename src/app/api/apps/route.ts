@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppsByCategory, getAllApps } from "@/lib/data";
-import { verifyToken } from "@/lib/auth";
+import { extractUser, successResponse, errorResponse } from "@/lib/apiHelpers";
 import { ApiResponse } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -10,19 +10,14 @@ export async function GET(request: NextRequest) {
     const includeInactive = searchParams.get("includeInactive") === "true";
 
     if (!category) {
-      const response: ApiResponse = {
-        success: false,
-        message: "카테고리를 지정해주세요.",
-      };
-      return NextResponse.json(response, { status: 400 });
+      return errorResponse("카테고리를 지정해주세요.", 400);
     }
 
     let apps;
 
     // 관리자가 includeInactive=true로 요청한 경우 비활성화된 앱도 포함
     if (includeInactive) {
-      const token = request.headers.get("authorization")?.replace("Bearer ", "");
-      const decoded = verifyToken(token || "");
+      const decoded = extractUser(request);
 
       if (decoded?.role === "admin") {
         const allApps = await getAllApps();
@@ -35,19 +30,9 @@ export async function GET(request: NextRequest) {
       apps = await getAppsByCategory(category);
     }
 
-    const response: ApiResponse = {
-      success: true,
-      message: "앱 목록을 가져왔습니다.",
-      data: apps,
-    };
-
-    return NextResponse.json(response);
+    return successResponse("앱 목록을 가져왔습니다.", apps);
   } catch (error) {
     console.error("Apps API error:", error);
-    const response: ApiResponse = {
-      success: false,
-      message: "앱 목록을 가져오는 중 오류가 발생했습니다.",
-    };
-    return NextResponse.json(response, { status: 500 });
+    return errorResponse("앱 목록을 가져오는 중 오류가 발생했습니다.");
   }
 }

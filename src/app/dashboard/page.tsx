@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { AppIconGrid } from "@/components/AppIconGrid";
 import { TodayTaskCard } from "@/components/TodayTaskCard";
 import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";

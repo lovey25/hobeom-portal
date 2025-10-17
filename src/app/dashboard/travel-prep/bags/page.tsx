@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { BagFormModal } from "../components/BagFormModal";
 import { cookieUtils } from "@/lib/cookies";
 import { Bag } from "@/types";

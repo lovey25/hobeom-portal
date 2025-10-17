@@ -5,6 +5,36 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
+## [0.4.0] - 2025-10-17
+
+### Changed - 대규모 리팩토링
+
+#### 코드 구조 개선
+
+- **공통 컴포넌트 통합**:
+  - `ProtectedRoute` → `src/components/common/` 이동
+  - `LoadingSpinner`, `ErrorMessage` 공통 컴포넌트 추가
+  - `src/components/common/index.ts` export 통합
+
+- **API 레이어 개선**:
+  - `src/lib/apiHelpers.ts` 생성: 공통 인증/응답 헬퍼
+  - `requireAuth()`, `requireAdmin()` 유틸리티 함수
+  - `successResponse()`, `errorResponse()` 표준화
+  - 주요 API 라우트에 헬퍼 함수 적용 완료
+
+- **데이터 계층 최적화**:
+  - `mapRawUser()`, `mapRawTravelItem()`, `mapRawBag()` 매핑 함수 추출
+  - 중복 코드 제거: `getUserByUsername()`, `getUserByEmail()` 간소화
+  - `getAllUsers()`, `getAllUsersWithStats()` 통합
+  - `getTravelItems()`, `getBags()` 리팩토링
+
+#### 코드 품질 향상
+
+- 중복 로직 제거로 유지보수성 증대
+- 일관된 에러 핸들링 패턴 적용
+- 타입 안정성 개선
+- 코드 재사용성 증가
+
 ## [0.3.0] - 2024-12-18
 
 ### Added

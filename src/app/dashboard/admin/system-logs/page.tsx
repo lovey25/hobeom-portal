@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { cookieUtils } from "@/lib/cookies";
 import { Card } from "@/components/ui/Card";

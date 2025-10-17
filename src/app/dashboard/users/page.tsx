@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";

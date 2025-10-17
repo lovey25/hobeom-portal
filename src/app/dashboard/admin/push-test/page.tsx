@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { cookieUtils } from "@/lib/cookies";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
