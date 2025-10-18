@@ -1078,12 +1078,7 @@ export default function SettingsPage() {
                           >
                             {testingPush ? "전송 중..." : "🚀 모든 디바이스에 테스트"}
                           </Button>
-                          <Button
-                            onClick={handlePushUnsubscribe}
-                            disabled={isSubscribing}
-                            variant="outline"
-                            className="text-sm"
-                          >
+                          <Button onClick={handlePushUnsubscribe} disabled={isSubscribing} className="text-sm">
                             {isSubscribing ? "처리 중..." : "이 디바이스 구독 해제"}
                           </Button>
                         </div>
@@ -1141,8 +1136,8 @@ export default function SettingsPage() {
                           ⚠️ <b>중요:</b> 구독 후에도 브라우저는 실행 중이어야 합니다. 브라우저가 완전히 꺼지면 알림을
                           받을 수 없습니다.
                           <br />
-                          💡 <b>해결책:</b> 위의 &quot;2️⃣ 앱으로 설치&quot;를 통해 PWA로 설치하면 브라우저 종료와 무관하게 알림을
-                          받을 수 있습니다 (모바일 권장)
+                          💡 <b>해결책:</b> 위의 &quot;2️⃣ 앱으로 설치&quot;를 통해 PWA로 설치하면 브라우저 종료와
+                          무관하게 알림을 받을 수 있습니다 (모바일 권장)
                         </div>
                       </div>
                     )}

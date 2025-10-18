@@ -20,6 +20,7 @@ export function Button({
     secondary: button.secondary,
     danger: button.danger,
     ghost: button.ghost,
+    base: button.base,
   };
 
   const sizes = {

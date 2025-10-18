@@ -127,7 +127,6 @@ export default function NotepadPage() {
                           <p className="text-xs text-gray-500 mt-1">{note.createdAt.toLocaleString()}</p>
                         </div>
                         <Button
-                          variant="outline"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -152,7 +151,7 @@ export default function NotepadPage() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-semibold">{currentNote ? "메모 편집" : "새 메모 작성"}</h2>
                   {currentNote && (
-                    <Button variant="outline" size="sm" onClick={clearEditor}>
+                    <Button size="sm" onClick={clearEditor}>
                       새 메모
                     </Button>
                   )}

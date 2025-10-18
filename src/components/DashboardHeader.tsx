@@ -34,7 +34,7 @@ export function DashboardHeader() {
                 홈으로
               </Link>
               <span className="text-gray-400">|</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button size="sm" onClick={handleLogout}>
                 로그아웃
               </Button>
             </div>

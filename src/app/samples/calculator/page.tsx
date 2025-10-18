@@ -93,56 +93,56 @@ export default function CalculatorPage() {
               <Button variant="secondary" onClick={clear} className="col-span-2">
                 Clear
               </Button>
-              <Button variant="outline" onClick={() => inputOperation("÷")}>
+              <Button variant="secondary" onClick={() => inputOperation("÷")}>
                 ÷
               </Button>
-              <Button variant="outline" onClick={() => inputOperation("×")}>
+              <Button variant="secondary" onClick={() => inputOperation("×")}>
                 ×
               </Button>
 
-              <Button variant="outline" onClick={() => inputNumber("7")}>
+              <Button variant="secondary" onClick={() => inputNumber("7")}>
                 7
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("8")}>
+              <Button variant="secondary" onClick={() => inputNumber("8")}>
                 8
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("9")}>
+              <Button variant="secondary" onClick={() => inputNumber("9")}>
                 9
               </Button>
-              <Button variant="outline" onClick={() => inputOperation("-")}>
+              <Button variant="secondary" onClick={() => inputOperation("-")}>
                 -
               </Button>
 
-              <Button variant="outline" onClick={() => inputNumber("4")}>
+              <Button variant="secondary" onClick={() => inputNumber("4")}>
                 4
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("5")}>
+              <Button variant="secondary" onClick={() => inputNumber("5")}>
                 5
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("6")}>
+              <Button variant="secondary" onClick={() => inputNumber("6")}>
                 6
               </Button>
-              <Button variant="outline" onClick={() => inputOperation("+")}>
+              <Button variant="secondary" onClick={() => inputOperation("+")}>
                 +
               </Button>
 
-              <Button variant="outline" onClick={() => inputNumber("1")}>
+              <Button variant="secondary" onClick={() => inputNumber("1")}>
                 1
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("2")}>
+              <Button variant="secondary" onClick={() => inputNumber("2")}>
                 2
               </Button>
-              <Button variant="outline" onClick={() => inputNumber("3")}>
+              <Button variant="secondary" onClick={() => inputNumber("3")}>
                 3
               </Button>
               <Button variant="primary" onClick={performCalculation} className="row-span-2">
                 =
               </Button>
 
-              <Button variant="outline" onClick={() => inputNumber("0")} className="col-span-2">
+              <Button variant="secondary" onClick={() => inputNumber("0")} className="col-span-2">
                 0
               </Button>
-              <Button variant="outline" onClick={() => inputNumber(".")}>
+              <Button variant="secondary" onClick={() => inputNumber(".")}>
                 .
               </Button>
             </div>

@@ -78,7 +78,7 @@ export default function WeatherPage() {
               {cities.map((city) => (
                 <Button
                   key={city}
-                  variant={location === city ? "primary" : "outline"}
+                  variant={location === city ? "primary" : "secondary"}
                   size="sm"
                   onClick={() => handleLocationChange(city)}
                   disabled={loading}
