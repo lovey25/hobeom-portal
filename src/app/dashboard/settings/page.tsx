@@ -694,7 +694,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">사용자명</label>
                     <Input value={user?.username || ""} disabled className="bg-gray-100" />
-                    <p className="text-xs text-gray-500 mt-1">사용자명은 변경할 수 없습니다</p>
+                    <p className="text.hint mt-1">사용자명은 변경할 수 없습니다</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
@@ -784,7 +784,7 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">대시보드 앱 아이콘 그리드의 열 개수를 설정합니다</p>
+                  <p className="text.hint mt-2">대시보드 앱 아이콘 그리드의 열 개수를 설정합니다</p>
                 </div>
 
                 <div>
@@ -866,7 +866,7 @@ export default function SettingsPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">설정이 변경되면 대시보드 페이지에 실시간으로 반영됩니다</p>
+                  <p className="text.hint mt-2">설정이 변경되면 대시보드 페이지에 실시간으로 반영됩니다</p>
                 </div>
 
                 <Button onClick={handleSaveSettings} disabled={saving}>
@@ -893,7 +893,7 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text-xs text-gray-500 mt-1">매일 이 시간에 할일이 초기화됩니다</p>
+                  <p className="text.hint mt-1">매일 이 시간에 할일이 초기화됩니다</p>
                 </div>
 
                 <div>
@@ -914,7 +914,7 @@ export default function SettingsPage() {
                     />
                     <span className="text-sm text-gray-700">주말 제외</span>
                   </label>
-                  <p className="text-xs text-gray-500 mt-1 ml-6">주말에는 할일을 초기화하지 않습니다</p>
+                  <p className="text.hint mt-1 ml-6">주말에는 할일을 초기화하지 않습니다</p>
                 </div>
 
                 <div>
@@ -934,7 +934,7 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text-xs text-gray-500 mt-1">최근 N일간의 통계를 표시합니다 (7-90일)</p>
+                  <p className="text.hint mt-1">최근 N일간의 통계를 표시합니다 (7-90일)</p>
                 </div>
 
                 <div>
@@ -954,7 +954,7 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text-xs text-gray-500 mt-1">목표로 하는 완료율입니다 (50-100%)</p>
+                  <p className="text.hint mt-1">목표로 하는 완료율입니다 (50-100%)</p>
                 </div>
 
                 <Button onClick={handleSaveSettings} disabled={saving}>
@@ -974,7 +974,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">1️⃣ 브라우저 알림 권한</h3>
-                      <p className="text-xs text-gray-500 mt-1">먼저 브라우저에서 알림을 허용해야 합니다</p>
+                      <p className="text.hint mt-1">먼저 브라우저에서 알림을 허용해야 합니다</p>
                     </div>
                     {isSupported && permission === "default" && (
                       <Button onClick={requestPermission} className="ml-4">
@@ -1033,14 +1033,14 @@ export default function SettingsPage() {
                 <div className="border-b pb-4">
                   <div className="mb-3">
                     <h3 className="font-semibold text-gray-900">2️⃣ 앱으로 설치 (선택 사항)</h3>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text.hint mt-1">
                       브라우저를 완전히 닫아도 알림을 받으려면 PWA로 설치하세요
                     </p>
                   </div>
 
                   <PWAInstallButton />
 
-                  <div className="mt-3 text-xs text-gray-600 bg-gray-50 rounded p-2">
+                  <div className="mt-3 text.hint bg-gray-50 rounded p-2">
                     <b>💡 설치 시 장점:</b>
                     <ul className="ml-4 mt-1 space-y-1">
                       <li>• 브라우저가 완전히 꺼져도 알림 수신 (모바일)</li>
@@ -1055,7 +1055,7 @@ export default function SettingsPage() {
                   <div className="border-b pb-4">
                     <div className="mb-3">
                       <h3 className="font-semibold text-gray-900">3️⃣ 백그라운드 푸시 알림</h3>
-                      <p className="text-xs text-gray-500 mt-1">여러 디바이스에서 개별적으로 구독할 수 있습니다</p>
+                      <p className="text.hint mt-1">여러 디바이스에서 개별적으로 구독할 수 있습니다</p>
                     </div>
 
                     {/* 현재 디바이스 구독 상태 */}
@@ -1115,7 +1115,7 @@ export default function SettingsPage() {
                           </div>
                         )}
 
-                        <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+                        <div className="text.hint bg-blue-50 rounded p-2">
                           💡 <b>테스트 푸시</b>는 구독된 모든 디바이스에 전송됩니다!
                         </div>
                       </div>
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
                         {/* 미구독 상태 */}
                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                           <p className="text-sm font-medium text-gray-800 mb-1">❌ 구독하지 않음</p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text.hint">
                             백그라운드에서 리마인더와 여행 알림을 받으려면 구독하세요
                           </p>
                         </div>
@@ -1132,7 +1132,7 @@ export default function SettingsPage() {
                           {isSubscribing ? "구독 중..." : "✅ 푸시 알림 구독하기"}
                         </Button>
 
-                        <div className="text-xs text-gray-600 bg-yellow-50 border border-yellow-200 rounded p-2">
+                        <div className="text.hint bg-yellow-50 border border-yellow-200 rounded p-2">
                           ⚠️ <b>중요:</b> 구독 후에도 브라우저는 실행 중이어야 합니다. 브라우저가 완전히 꺼지면 알림을
                           받을 수 없습니다.
                           <br />
@@ -1148,7 +1148,7 @@ export default function SettingsPage() {
                 <div className="border-b pb-4">
                   <div className="mb-3">
                     <h3 className="font-semibold text-gray-900">4️⃣ 알림 종류 설정</h3>
-                    <p className="text-xs text-gray-500 mt-1">받고 싶은 알림 종류를 선택하세요</p>
+                    <p className="text.hint mt-1">받고 싶은 알림 종류를 선택하세요</p>
                   </div>
 
                   <div className="space-y-3">
@@ -1174,56 +1174,6 @@ export default function SettingsPage() {
                         disabled={!isSupported || permission !== "granted"}
                       />
                     </label>
-
-                    {/* 여행 준비 알림 */}
-                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <div>
-                        <div className="font-medium text-gray-900">✈️ 여행 준비 알림</div>
-                        <div className="text-sm text-gray-500">여행 D-day 알림</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.travelPrepEnabled}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            notifications: {
-                              ...settings.notifications,
-                              travelPrepEnabled: e.target.checked,
-                            },
-                          })
-                        }
-                        className="w-5 h-5"
-                        disabled={!isSupported || permission !== "granted"}
-                      />
-                    </label>
-
-                    {/* 여행 알림 시작일 설정 */}
-                    {settings.notifications.travelPrepEnabled && (
-                      <div className="ml-8 mt-2 flex items-center gap-2 text-sm">
-                        <span className="text-gray-600">여행</span>
-                        <select
-                          value={settings.notifications.travelNotificationDays}
-                          onChange={(e) =>
-                            setSettings({
-                              ...settings,
-                              notifications: {
-                                ...settings.notifications,
-                                travelNotificationDays: parseInt(e.target.value),
-                              },
-                            })
-                          }
-                          className="px-2 py-1 border rounded text-sm bg-white"
-                        >
-                          <option value={1}>1일</option>
-                          <option value={3}>3일</option>
-                          <option value={7}>7일</option>
-                          <option value={14}>14일</option>
-                          <option value={30}>30일</option>
-                        </select>
-                        <span className="text-gray-600">전부터 알림</span>
-                      </div>
-                    )}
 
                     {/* 응원 메시지 */}
                     <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
@@ -1302,9 +1252,59 @@ export default function SettingsPage() {
                             </label>
                           ))}
                         </div>
-                        <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+                        <div className="text.hint bg-blue-50 rounded p-2">
                           💡 푸시 알림 구독 시 선택한 시간에 자동으로 알림이 전송됩니다
                         </div>
+                      </div>
+                    )}
+
+                    {/* 여행 준비 알림 */}
+                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <div className="font-medium text-gray-900">✈️ 여행 준비 알림</div>
+                        <div className="text-sm text-gray-500">여행 D-day 알림</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.travelPrepEnabled}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            notifications: {
+                              ...settings.notifications,
+                              travelPrepEnabled: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-5 h-5"
+                        disabled={!isSupported || permission !== "granted"}
+                      />
+                    </label>
+
+                    {/* 여행 알림 시작일 설정 */}
+                    {settings.notifications.travelPrepEnabled && (
+                      <div className="ml-8 mt-2 flex items-center gap-2 text-sm">
+                        <span className="text-gray-600">여행</span>
+                        <select
+                          value={settings.notifications.travelNotificationDays}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              notifications: {
+                                ...settings.notifications,
+                                travelNotificationDays: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          className="px-2 py-1 border rounded text-sm bg-white"
+                        >
+                          <option value={1}>1일</option>
+                          <option value={3}>3일</option>
+                          <option value={7}>7일</option>
+                          <option value={14}>14일</option>
+                          <option value={30}>30일</option>
+                        </select>
+                        <span className="text-gray-600">전부터 알림</span>
                       </div>
                     )}
                   </div>
@@ -1406,7 +1406,7 @@ export default function SettingsPage() {
                                   />
                                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                                 </label>
-                                <span className="text-xs text-gray-500">전체</span>
+                                <span className="text.hint">전체</span>
                               </div>
                             )}
 
@@ -1423,7 +1423,7 @@ export default function SettingsPage() {
                                 />
                                 <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                               </label>
-                              <span className="text-xs text-gray-500">개인</span>
+                              <span className="text.hint">개인</span>
                             </div>
                           </div>
                         </div>

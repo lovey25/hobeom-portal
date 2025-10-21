@@ -133,15 +133,17 @@ export const button = {
  */
 export const form = {
   // 입력 필드
-  input: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
+  input:
+    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-500",
   inputError: "border-red-500 focus:ring-red-500",
 
   // 텍스트 영역
   textarea:
-    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none",
+    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 placeholder:text-gray-500",
 
   // 선택 박스
-  select: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
+  select:
+    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900",
 
   // 체크박스/라디오
   checkbox: "h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500",

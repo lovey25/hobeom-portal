@@ -281,3 +281,68 @@ export interface ActivityLog {
   createdAt: string;
   appId?: string;
 }
+
+/**
+ * 칭찬뱃지 - 사용자별 칭찬 현황
+ */
+export interface PraiseBadge {
+  id: string;
+  userId: string;
+  currentPoints: number; // 현재 칭찬 포인트 (0-3)
+  completedBadges: number; // 완성된 뱃지 개수
+  lastUpdated: string;
+}
+
+/**
+ * 칭찬 히스토리
+ */
+export interface PraiseHistory {
+  id: string;
+  userId: string;
+  givenBy: string; // 관리자 userId
+  timestamp: string;
+  pointsAfter: number; // 칭찬 후 포인트 (0-3)
+  badgesAfter: number; // 칭찬 후 완성된 뱃지 개수
+  comment?: string;
+}
+
+/**
+ * 칭찬 소진 히스토리
+ */
+export interface PraiseRedemption {
+  id: string;
+  userId: string;
+  badgeCount: number; // 소진한 뱃지 개수 (1-4)
+  rewardItemId: string; // 선택한 보상 아이템 ID
+  rewardItemName: string; // 보상 아이템 이름 (스냅샷)
+  timestamp: string;
+  status: "pending" | "approved" | "completed"; // 관리자 승인 상태
+  approvedBy?: string; // 승인한 관리자 userId
+  approvedAt?: string;
+  comment?: string;
+}
+
+/**
+ * 칭찬 보상 아이템 - 관리자가 설정
+ */
+export interface PraiseRewardItem {
+  id: string;
+  badgeLevel: number; // 필요한 뱃지 개수 (1-4)
+  name: string;
+  description?: string;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 칭찬 매핑 - 칭찬을 주는 사람과 받는 사람의 관계
+ */
+export interface PraiseMapping {
+  id: string;
+  giverUserId: string; // 칭찬을 주는 사람
+  receiverUserId: string; // 칭찬을 받는 사람
+  createdAt: string;
+  isActive: boolean; // 활성 여부
+}
