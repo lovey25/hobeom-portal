@@ -288,7 +288,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         body: message,
         tag: "daily-tasks-encouragement",
         requireInteraction: false,
-        url: url || `${window.location.origin}/dashboard/daily-tasks`,
+        url: url || `${window.location.origin}/dashboard`,
       });
     },
     [sendNotification]
@@ -301,7 +301,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         body: message,
         tag: "daily-tasks-reminder",
         requireInteraction: false,
-        url: `${window.location.origin}/dashboard/daily-tasks`,
+        url: `${window.location.origin}/dashboard`,
       });
     },
     [sendNotification]

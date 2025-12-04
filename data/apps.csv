@@ -1,7 +1,7 @@
 id,name,description,icon,href,require_auth,category,order,is_active
 1,계산기,간단한 계산기 앱,🧮,/samples/calculator,false,public,1,true
 2,메모장,간단한 메모 작성 도구,📝,/samples/notepad,false,public,2,false
-3,날씨,현재 날씨 정보,🌤️,/samples/weather,false,public,3,true
+3,날씨,현재 날씨 정보,🌤️,/samples/weather,false,public,3,false
 4,곱셈구구,음성 인식 구구단 퀴즈,🔢,/samples/multiplication-quiz,false,public,4,true
 5,오늘할일,매일 할일 관리 및 완료율 추적,📋,/dashboard/daily-tasks,true,dashboard,1,true
 6,여행준비물,여행 준비물 체크리스트,🧳,/dashboard/travel-prep,true,dashboard,2,true

@@ -224,7 +224,7 @@ export default function PraiseBadgePage() {
         },
         body: JSON.stringify({
           userId: selectedReceiver,
-          message: praiseMessage,
+          comment: praiseMessage,
         }),
       });
 
@@ -485,15 +485,18 @@ export default function PraiseBadgePage() {
             <p className={text.secondary}>아직 받은 칭찬이 없습니다</p>
           ) : (
             <div className="space-y-3">
-              {history.slice(0, 5).map((item) => (
-                <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900">칭찬 받음</span>
-                    <span className={text.meta}>{new Date(item.timestamp).toLocaleDateString()}</span>
+              {history
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .slice(0, 5)
+                .map((item) => (
+                  <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-900">칭찬 받음</span>
+                      <span className={text.meta}>{new Date(item.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    {item.comment && <p className={text.secondary}>{item.comment}</p>}
                   </div>
-                  {item.comment && <p className={text.secondary}>{item.comment}</p>}
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </Card>
@@ -779,22 +782,25 @@ export default function PraiseBadgePage() {
             <p className={text.secondary}>아직 칭찬을 준 내역이 없습니다</p>
           ) : (
             <div className="space-y-3">
-              {giverHistory.slice(0, 10).map((item: any) => (
-                <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <span className="font-medium text-gray-900">{item.receiverName}</span>
-                      <span className={text.tertiary + " ml-2"}>@{item.receiverUsername}</span>
+              {giverHistory
+                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .slice(0, 10)
+                .map((item: any) => (
+                  <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="font-medium text-gray-900">{item.receiverName}</span>
+                        <span className={text.tertiary + " ml-2"}>@{item.receiverUsername}</span>
+                      </div>
+                      <span className={text.meta}>{new Date(item.timestamp).toLocaleDateString()}</span>
                     </div>
-                    <span className={text.meta}>{new Date(item.timestamp).toLocaleDateString()}</span>
+                    {item.comment && <p className={text.secondary}>{item.comment}</p>}
+                    <div className={"flex items-center gap-3 mt-2 " + text.tertiary}>
+                      <span>포인트: {item.pointsAfter}/4</span>
+                      <span>완성 뱃지: {item.badgesAfter}개</span>
+                    </div>
                   </div>
-                  {item.comment && <p className={text.secondary}>{item.comment}</p>}
-                  <div className={"flex items-center gap-3 mt-2 " + text.tertiary}>
-                    <span>포인트: {item.pointsAfter}/4</span>
-                    <span>완성 뱃지: {item.badgesAfter}개</span>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </Card>

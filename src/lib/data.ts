@@ -212,7 +212,7 @@ export async function updateUser(userId: string, updates: Partial<User>): Promis
       rawUsers[userIndex].email = updates.email;
     }
     if (updates.passwordHash) {
-      rawUsers[userIndex].password_hash = updates.passwordHash;
+      rawUsers[userIndex].passwordHash = updates.passwordHash;
     }
 
     await writeCSV("users.csv", rawUsers);
@@ -273,11 +273,11 @@ export async function createUser(userData: {
       username: userData.username,
       email: userData.email,
       name: userData.name,
-      password_hash: hashedPassword,
+      passwordHash: hashedPassword,
       role: userData.role || "user",
-      created_at: now,
-      last_login: "",
-      last_access: "",
+      createdAt: now,
+      lastLogin: "",
+      lastAccess: "",
     };
 
     rawUsers.push(newUserRecord);
