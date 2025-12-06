@@ -23,12 +23,12 @@ import {
 const DATA_DIR = path.join(process.cwd(), "data");
 
 // CSV 파일이 없을 때 샘플 파일로부터 초기화
-async function ensureDataFile(filename: string): Promise<void> {
+export async function ensureDataFile(filename: string, sampleFilename?: string): Promise<void> {
   const filepath = path.join(DATA_DIR, filename);
-  const sampleFilepath = path.join(DATA_DIR, filename.replace(".csv", ".sample.csv"));
+  const sampleFilepath = path.join(DATA_DIR, sampleFilename || filename.replace(".csv", ".sample.csv"));
 
   if (!fs.existsSync(filepath) && fs.existsSync(sampleFilepath)) {
-    console.log(`Initializing ${filename} from sample file...`);
+    console.log(`Initializing ${filename} from ${sampleFilename || filename.replace(".csv", ".sample.csv")}...`);
     fs.copyFileSync(sampleFilepath, filepath);
   }
 }

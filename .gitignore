@@ -44,4 +44,5 @@ next-env.d.ts
 # data files (contains sensitive user information)
 *.backup
 /data/*.csv
+/data/*.db*
 !/data/*.sample.csv

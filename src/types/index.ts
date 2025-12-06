@@ -346,3 +346,31 @@ export interface PraiseMapping {
   createdAt: string;
   isActive: boolean; // 활성 여부
 }
+
+/**
+ * 카페 게시글
+ */
+export interface Post {
+  id: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  viewCount: number;
+  commentCount: number;
+}
+
+/**
+ * 카페 댓글
+ */
+export interface Comment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
