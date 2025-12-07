@@ -20,6 +20,7 @@ import {
   ActivityLog,
 } from "@/types";
 
+// 모든 환경에서 동일한 data 디렉토리 사용
 const DATA_DIR = path.join(process.cwd(), "data");
 
 // CSV 파일이 없을 때 샘플 파일로부터 초기화
