@@ -8,6 +8,7 @@ import { ItemCard } from "../components/ItemCard";
 import { ItemFormModal, ItemFormData } from "../components/ItemFormModal";
 import { cookieUtils } from "@/lib/cookies";
 import { TravelItem } from "@/types";
+import { layout, text, state, button, badge, cn } from "@/styles/design-system";
 
 function ItemsSelectionContent() {
   const router = useRouter();
@@ -267,15 +268,10 @@ function ItemsSelectionContent() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
-              </div>
-            </div>
-          </div>
+        <div className={layout.page}>
+          <main className={layout.container}>
+            <p className={state.loading}>로딩 중...</p>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -283,12 +279,14 @@ function ItemsSelectionContent() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 py-8 pb-32">
+      <div className={layout.page}>
+        <div className={cn(layout.containerMedium, "pb-32")}>
           {/* 준비물 선택 상태 */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-gray-600 mt-2">여행에 필요한 준비물을 선택해주세요 (선택: {selectedItems.size}개)</p>
+              <p className={cn(text.description, "mt-2")}>
+                여행에 필요한 준비물을 선택해주세요 (선택: {selectedItems.size}개)
+              </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -296,7 +294,7 @@ function ItemsSelectionContent() {
                   setEditingItem(null);
                   setIsModalOpen(true);
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                className={cn(button.base, button.medium, "bg-green-600 hover:bg-green-700 text-white")}
               >
                 + 준비물 추가
               </button>
@@ -306,29 +304,23 @@ function ItemsSelectionContent() {
           {/* 정렬 및 선택 컨트롤 */}
           <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">정렬 및 선택</h2>
+              <h2 className={cn(text.cardTitle, "text-sm")}>정렬 및 선택</h2>
               <div className="flex gap-2">
-                <button
-                  onClick={handleSelectAll}
-                  className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
-                >
+                <button onClick={handleSelectAll} className={cn(button.base, button.small, button.ghost)}>
                   모두 선택
                 </button>
-                <button
-                  onClick={handleDeselectAll}
-                  className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                >
+                <button onClick={handleDeselectAll} className={cn(button.base, button.small, button.ghost)}>
                   선택 해제
                 </button>
                 {/* 이미 추가된 아이템 숨기기 버튼 */}
                 {existingItemIds.size > 0 && (
                   <button
                     onClick={() => setHideExistingItems(!hideExistingItems)}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors font-medium ${
-                      hideExistingItems
-                        ? "bg-purple-600 text-white hover:bg-purple-700"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={cn(
+                      button.base,
+                      button.small,
+                      hideExistingItems ? "bg-purple-600 text-white hover:bg-purple-700" : button.ghost
+                    )}
                   >
                     {hideExistingItems ? "✓ 추가됨 숨김" : "추가됨 숨기기"}
                   </button>

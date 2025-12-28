@@ -1,5 +1,6 @@
 import React from "react";
 import { TripItemFilter } from "@/types";
+import { text, form, cn } from "@/styles/design-system";
 
 interface FilterBarProps {
   filter: TripItemFilter;
@@ -11,7 +12,7 @@ export function FilterBar({ filter, onFilterChange, categories }: FilterBarProps
   return (
     <div className="bg-white p-4 rounded-lg border border-gray-200">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">필터</h3>
+        <h3 className={cn(text.cardTitle, "text-sm")}>필터</h3>
         <button
           onClick={() =>
             onFilterChange({
@@ -30,7 +31,7 @@ export function FilterBar({ filter, onFilterChange, categories }: FilterBarProps
       <div className="flex items-center gap-4">
         {/* 중요도 필터 */}
         <div className="flex items-center gap-2 flex-1">
-          <label className="text-xs text-gray-600 whitespace-nowrap">중요도</label>
+          <label className={cn(text.hint, "whitespace-nowrap")}>중요도</label>
           <select
             value={filter.importance || "all"}
             onChange={(e) =>
@@ -52,7 +53,7 @@ export function FilterBar({ filter, onFilterChange, categories }: FilterBarProps
 
         {/* 분류 필터 */}
         <div className="flex items-center gap-2 flex-1">
-          <label className="text-xs text-gray-600 whitespace-nowrap">분류</label>
+          <label className={cn(text.hint, "whitespace-nowrap")}>분류</label>
           <select
             value={filter.category || "all"}
             onChange={(e) =>

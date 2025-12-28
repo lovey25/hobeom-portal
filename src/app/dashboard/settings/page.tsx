@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { layout, text, state, button, cn } from "@/styles/design-system";
 
 interface Settings {
   display: {
@@ -644,11 +645,9 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <main className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-gray-500">로딩 중...</div>
-            </div>
+        <div className={layout.page}>
+          <main className={layout.container}>
+            <p className={state.loading}>로딩 중...</p>
           </main>
         </div>
       </ProtectedRoute>
@@ -665,9 +664,9 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">⚙️ 설정</h1>
+      <div className={layout.page}>
+        <main className={cn(layout.container, "py-6")}>
+          <h1 className={text.pageTitle}>⚙️ 설정</h1>
 
           {/* 탭 네비게이션 */}
           <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
@@ -675,12 +674,15 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                  activeTab === tab.id ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                }`}
+                className={cn(
+                  button.base,
+                  button.small,
+                  activeTab === tab.id ? button.primary : button.ghost,
+                  "flex items-center gap-2 whitespace-nowrap"
+                )}
               >
                 <span>{tab.icon}</span>
-                <span className="text-sm sm:text-base">{tab.label}</span>
+                <span className={text.body}>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -689,15 +691,15 @@ export default function SettingsPage() {
           {activeTab === "profile" && (
             <div className="space-y-4 sm:space-y-6">
               <Card>
-                <h2 className="text-lg sm:text-xl font-bold mb-4">기본 정보</h2>
+                <h2 className={cn(text.sectionTitle, "mb-4")}>기본 정보</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">사용자명</label>
-                    <Input value={user?.username || ""} disabled className="bg-gray-100" />
-                    <p className="text.hint mt-1">사용자명은 변경할 수 없습니다</p>
+                    <label className={cn(text.label, "mb-1")}>사용자명</label>
+                    <Input value={user?.username || ""} disabled />
+                    <p className={cn(text.hint, "mt-1")}>사용자명은 변경할 수 없습니다</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
+                    <label className={cn(text.label, "mb-1")}>이름</label>
                     <Input
                       value={name}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
@@ -705,7 +707,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                    <label className={cn(text.label, "mb-1")}>이메일</label>
                     <Input
                       type="email"
                       value={email}
@@ -720,10 +722,10 @@ export default function SettingsPage() {
               </Card>
 
               <Card>
-                <h2 className="text-lg sm:text-xl font-bold mb-4">비밀번호 변경</h2>
+                <h2 className={cn(text.sectionTitle, "mb-4")}>비밀번호 변경</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
+                    <label className={cn(text.label, "mb-1")}>현재 비밀번호</label>
                     <Input
                       type="password"
                       value={currentPassword}
@@ -732,7 +734,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+                    <label className={cn(text.label, "mb-1")}>새 비밀번호</label>
                     <Input
                       type="password"
                       value={newPassword}
@@ -741,7 +743,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
+                    <label className={cn(text.label, "mb-1")}>새 비밀번호 확인</label>
                     <Input
                       type="password"
                       value={confirmPassword}
@@ -760,10 +762,10 @@ export default function SettingsPage() {
           {/* 표시 탭 */}
           {activeTab === "display" && (
             <Card>
-              <h2 className="text-lg sm:text-xl font-bold mb-4">표시 설정</h2>
+              <h2 className={cn(text.sectionTitle, "mb-4")}>표시 설정</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">대시보드 열 개수</label>
+                  <label className={cn(text.label, "mb-2")}>대시보드 열 개수</label>
                   <div className="flex gap-4">
                     {[3, 4, 5, 6].map((cols) => (
                       <button
@@ -784,11 +786,11 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text.hint mt-2">대시보드 앱 아이콘 그리드의 열 개수를 설정합니다</p>
+                  <p className={cn(text.hint, "mt-2")}>대시보드 앱 아이콘 그리드의 열 개수를 설정합니다</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">카드 크기</label>
+                  <label className={cn(text.label, "mb-2")}>카드 크기</label>
                   <div className="flex gap-4">
                     {[
                       { value: "small", label: "작게" },
@@ -820,7 +822,7 @@ export default function SettingsPage() {
 
                 {/* 미리보기 */}
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">미리보기</h3>
+                  <h3 className={cn(text.cardTitle, "mb-3")}>미리보기</h3>
                   <div
                     className={`grid gap-2 ${
                       settings.display.dashboardColumns === 3
@@ -866,7 +868,7 @@ export default function SettingsPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text.hint mt-2">설정이 변경되면 대시보드 페이지에 실시간으로 반영됩니다</p>
+                  <p className={cn(text.hint, "mt-2")}>설정이 변경되면 대시보드 페이지에 실시간으로 반영됩니다</p>
                 </div>
 
                 <Button onClick={handleSaveSettings} disabled={saving}>
@@ -879,10 +881,10 @@ export default function SettingsPage() {
           {/* 할일 탭 */}
           {activeTab === "daily-tasks" && (
             <Card>
-              <h2 className="text-lg sm:text-xl font-bold mb-4">할일 설정</h2>
+              <h2 className={cn(text.sectionTitle, "mb-4")}>할일 설정</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">할일 초기화 시간</label>
+                  <label className={cn(text.label, "mb-2")}>할일 초기화 시간</label>
                   <Input
                     type="time"
                     value={settings.dailyTasks.resetTime}
@@ -893,7 +895,7 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text.hint mt-1">매일 이 시간에 할일이 초기화됩니다</p>
+                  <p className={cn(text.hint, "mt-1")}>매일 이 시간에 할일이 초기화됩니다</p>
                 </div>
 
                 <div>
@@ -912,13 +914,13 @@ export default function SettingsPage() {
                       }
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-700">주말 제외</span>
+                    <span className={text.body}>주말 제외</span>
                   </label>
-                  <p className="text.hint mt-1 ml-6">주말에는 할일을 초기화하지 않습니다</p>
+                  <p className={cn(text.hint, "mt-1 ml-6")}>주말에는 할일을 초기화하지 않습니다</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">통계 기간 (일)</label>
+                  <label className={cn(text.label, "mb-2")}>통계 기간 (일)</label>
                   <Input
                     type="number"
                     min="7"
@@ -934,11 +936,11 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text.hint mt-1">최근 N일간의 통계를 표시합니다 (7-90일)</p>
+                  <p className={cn(text.hint, "mt-1")}>최근 N일간의 통계를 표시합니다 (7-90일)</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">목표 완료율 (%)</label>
+                  <label className={cn(text.label, "mb-2")}>목표 완료율 (%)</label>
                   <Input
                     type="number"
                     min="50"
@@ -954,7 +956,7 @@ export default function SettingsPage() {
                       })
                     }
                   />
-                  <p className="text.hint mt-1">목표로 하는 완료율입니다 (50-100%)</p>
+                  <p className={cn(text.hint, "mt-1")}>목표로 하는 완료율입니다 (50-100%)</p>
                 </div>
 
                 <Button onClick={handleSaveSettings} disabled={saving}>
@@ -967,17 +969,17 @@ export default function SettingsPage() {
           {/* 알림 탭 */}
           {activeTab === "notifications" && (
             <Card>
-              <h2 className="text-lg sm:text-xl font-bold mb-4">알림 설정</h2>
+              <h2 className={cn(text.sectionTitle, "mb-4")}>알림 설정</h2>
               <div className="space-y-6">
                 {/* ========== 1단계: 브라우저 알림 권한 ========== */}
                 <div className="border-b pb-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-gray-900">1️⃣ 브라우저 알림 권한</h3>
-                      <p className="text.hint mt-1">먼저 브라우저에서 알림을 허용해야 합니다</p>
+                      <h3 className={text.cardTitle}>1️⃣ 브라우저 알림 권한</h3>
+                      <p className={cn(text.hint, "mt-1")}>먼저 브라우저에서 알림을 허용해야 합니다</p>
                     </div>
                     {isSupported && permission === "default" && (
-                      <Button onClick={requestPermission} className="ml-4">
+                      <Button onClick={requestPermission} variant="primary" size="sm" className="ml-4">
                         권한 요청
                       </Button>
                     )}
@@ -1019,7 +1021,8 @@ export default function SettingsPage() {
                           <Button
                             onClick={handleTestNotification}
                             disabled={testingNotification}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                            variant="primary"
+                            size="sm"
                           >
                             {testingNotification ? "전송 중..." : "🔔 테스트 알림 보내기"}
                           </Button>
@@ -1032,15 +1035,13 @@ export default function SettingsPage() {
                 {/* ========== 2단계: PWA 설치 (선택 사항) ========== */}
                 <div className="border-b pb-4">
                   <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900">2️⃣ 앱으로 설치 (선택 사항)</h3>
-                    <p className="text.hint mt-1">
-                      브라우저를 완전히 닫아도 알림을 받으려면 PWA로 설치하세요
-                    </p>
+                    <h3 className={text.cardTitle}>2️⃣ 앱으로 설치 (선택 사항)</h3>
+                    <p className={cn(text.hint, "mt-1")}>브라우저를 완전히 닫아도 알림을 받으려면 PWA로 설치하세요</p>
                   </div>
 
                   <PWAInstallButton />
 
-                  <div className="mt-3 text.hint bg-gray-50 rounded p-2">
+                  <div className={cn(text.hint, "mt-3 bg-gray-50 rounded p-2")}>
                     <b>💡 설치 시 장점:</b>
                     <ul className="ml-4 mt-1 space-y-1">
                       <li>• 브라우저가 완전히 꺼져도 알림 수신 (모바일)</li>
@@ -1054,8 +1055,8 @@ export default function SettingsPage() {
                 {isSupported && permission === "granted" && (
                   <div className="border-b pb-4">
                     <div className="mb-3">
-                      <h3 className="font-semibold text-gray-900">3️⃣ 백그라운드 푸시 알림</h3>
-                      <p className="text.hint mt-1">여러 디바이스에서 개별적으로 구독할 수 있습니다</p>
+                      <h3 className={text.cardTitle}>3️⃣ 백그라운드 푸시 알림</h3>
+                      <p className={cn(text.hint, "mt-1")}>여러 디바이스에서 개별적으로 구독할 수 있습니다</p>
                     </div>
 
                     {/* 현재 디바이스 구독 상태 */}
@@ -1071,14 +1072,10 @@ export default function SettingsPage() {
 
                         {/* 액션 버튼 */}
                         <div className="flex flex-wrap gap-2">
-                          <Button
-                            onClick={handleTestPush}
-                            disabled={testingPush}
-                            className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
-                          >
+                          <Button onClick={handleTestPush} disabled={testingPush} variant="primary" size="sm">
                             {testingPush ? "전송 중..." : "🚀 모든 디바이스에 테스트"}
                           </Button>
-                          <Button onClick={handlePushUnsubscribe} disabled={isSubscribing} className="text-sm">
+                          <Button onClick={handlePushUnsubscribe} disabled={isSubscribing} size="sm">
                             {isSubscribing ? "처리 중..." : "이 디바이스 구독 해제"}
                           </Button>
                         </div>
@@ -1115,7 +1112,7 @@ export default function SettingsPage() {
                           </div>
                         )}
 
-                        <div className="text.hint bg-blue-50 rounded p-2">
+                        <div className={cn(text.hint, "bg-blue-50 rounded p-2")}>
                           💡 <b>테스트 푸시</b>는 구독된 모든 디바이스에 전송됩니다!
                         </div>
                       </div>
@@ -1124,15 +1121,13 @@ export default function SettingsPage() {
                         {/* 미구독 상태 */}
                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                           <p className="text-sm font-medium text-gray-800 mb-1">❌ 구독하지 않음</p>
-                          <p className="text.hint">
-                            백그라운드에서 리마인더와 여행 알림을 받으려면 구독하세요
-                          </p>
+                          <p className={text.hint}>백그라운드에서 리마인더와 여행 알림을 받으려면 구독하세요</p>
                         </div>
                         <Button onClick={handlePushSubscribe} disabled={isSubscribing} className="w-full">
                           {isSubscribing ? "구독 중..." : "✅ 푸시 알림 구독하기"}
                         </Button>
 
-                        <div className="text.hint bg-yellow-50 border border-yellow-200 rounded p-2">
+                        <div className={cn(text.hint, "bg-yellow-50 border border-yellow-200 rounded p-2")}>
                           ⚠️ <b>중요:</b> 구독 후에도 브라우저는 실행 중이어야 합니다. 브라우저가 완전히 꺼지면 알림을
                           받을 수 없습니다.
                           <br />
@@ -1147,8 +1142,8 @@ export default function SettingsPage() {
                 {/* ========== 4단계: 알림 종류별 설정 ========== */}
                 <div className="border-b pb-4">
                   <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900">4️⃣ 알림 종류 설정</h3>
-                    <p className="text.hint mt-1">받고 싶은 알림 종류를 선택하세요</p>
+                    <h3 className={text.cardTitle}>4️⃣ 알림 종류 설정</h3>
+                    <p className={cn(text.hint, "mt-1")}>받고 싶은 알림 종류를 선택하세요</p>
                   </div>
 
                   <div className="space-y-3">
@@ -1252,7 +1247,7 @@ export default function SettingsPage() {
                             </label>
                           ))}
                         </div>
-                        <div className="text.hint bg-blue-50 rounded p-2">
+                        <div className={cn(text.hint, "bg-blue-50 rounded p-2")}>
                           💡 푸시 알림 구독 시 선택한 시간에 자동으로 알림이 전송됩니다
                         </div>
                       </div>
@@ -1406,7 +1401,7 @@ export default function SettingsPage() {
                                   />
                                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                                 </label>
-                                <span className="text.hint">전체</span>
+                                <span className={text.hint}>전체</span>
                               </div>
                             )}
 
@@ -1423,7 +1418,7 @@ export default function SettingsPage() {
                                 />
                                 <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                               </label>
-                              <span className="text.hint">개인</span>
+                              <span className={text.hint}>개인</span>
                             </div>
                           </div>
                         </div>
@@ -1434,7 +1429,7 @@ export default function SettingsPage() {
               })}
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="font-medium text-blue-900 mb-2">💡 사용 팁</h3>
+                <h3 className={cn(text.cardTitle, "text-blue-900 mb-2")}>💡 사용 팁</h3>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• 앱을 드래그하여 순서를 변경할 수 있습니다</li>
                   <li>• 토글 스위치로 앱을 숨기거나 표시할 수 있습니다</li>

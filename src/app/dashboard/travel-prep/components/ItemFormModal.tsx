@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { TravelItem } from "@/types";
+import { text, button, form, cn } from "@/styles/design-system";
 
 interface ItemFormModalProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export function ItemFormModal({ isOpen, onClose, onSave, item, categories }: Ite
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">{item ? "준비물 수정" : "준비물 추가"}</h2>
+          <h2 className={text.sectionTitle}>{item ? "준비물 수정" : "준비물 추가"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl" disabled={isSaving}>
             ×
           </button>
@@ -92,7 +93,7 @@ export function ItemFormModal({ isOpen, onClose, onSave, item, categories }: Ite
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* 이름 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className={cn(text.label, "mb-1")}>
               이름 <span className="text-red-500">*</span>
             </label>
             <input

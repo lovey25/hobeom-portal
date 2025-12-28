@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { BagFormModal } from "../components/BagFormModal";
 import { cookieUtils } from "@/lib/cookies";
 import { Bag } from "@/types";
+import { layout, text, state, button, cn } from "@/styles/design-system";
 
 function BagsSelectionContent() {
   const router = useRouter();
@@ -186,15 +187,10 @@ function BagsSelectionContent() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
-              </div>
-            </div>
-          </div>
+        <div className={layout.page}>
+          <main className={layout.container}>
+            <p className={state.loading}>로딩 중...</p>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -202,25 +198,21 @@ function BagsSelectionContent() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className={layout.page}>
+        <div className={cn(layout.containerMedium, "py-8")}>
           {/* 가방 선택 상태 */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 mt-2">여행에 사용할 가방을 선택해주세요 (선택: {selectedBags.size}개)</p>
+                <p className={cn(text.description, "mt-2")}>
+                  여행에 사용할 가방을 선택해주세요 (선택: {selectedBags.size}개)
+                </p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={handleSelectAll}
-                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-sm"
-                >
+                <button onClick={handleSelectAll} className={cn(button.base, button.small, button.ghost)}>
                   모두 선택
                 </button>
-                <button
-                  onClick={handleDeselectAll}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm"
-                >
+                <button onClick={handleDeselectAll} className={cn(button.base, button.small, button.ghost)}>
                   선택 해제
                 </button>
                 <button
@@ -228,7 +220,11 @@ function BagsSelectionContent() {
                     setEditingBag(null);
                     setIsModalOpen(true);
                   }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"
+                  className={cn(
+                    button.base,
+                    button.medium,
+                    "bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                  )}
                 >
                   <span className="text-xl">+</span>새 가방 추가
                 </button>

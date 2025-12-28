@@ -7,6 +7,7 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 import { cookieUtils } from "@/lib/cookies";
 import { TravelTypeTemplate, TripList } from "@/types";
+import { layout, text, state, button, cn } from "@/styles/design-system";
 
 export default function SelectTripPage() {
   const router = useRouter();
@@ -115,15 +116,10 @@ export default function SelectTripPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
-              </div>
-            </div>
-          </div>
+        <div className={layout.page}>
+          <main className={layout.container}>
+            <p className={state.loading}>로딩 중...</p>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -131,12 +127,12 @@ export default function SelectTripPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className={layout.page}>
+        <div className={cn(layout.containerMedium, "py-8")}>
           {/* 기존 여행 목록 */}
           {existingTrips.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">최근 여행</h2>
+              <h2 className={cn(text.sectionTitle, "mb-4")}>최근 여행</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {existingTrips.map((trip) => (
                   <button
@@ -163,11 +159,11 @@ export default function SelectTripPage() {
           <div>
             {!isCreating ? (
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">새 여행 만들기</h2>
+                <h2 className={cn(text.sectionTitle, "mb-4")}>새 여행 만들기</h2>
 
                 {/* 템플릿 선택 */}
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">템플릿에서 선택</h3>
+                  <h3 className={cn(text.cardTitle, "mb-3")}>템플릿에서 선택</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {travelTypes.map((template) => (
                       <button
@@ -187,19 +183,19 @@ export default function SelectTripPage() {
                 {/* 직접 만들기 버튼 */}
                 <button
                   onClick={() => setIsCreating(true)}
-                  className="w-full p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className={cn(button.base, button.medium, button.primary, "w-full")}
                 >
                   직접 만들기
                 </button>
               </div>
             ) : (
               <div className="bg-white rounded-lg p-6 border border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">여행 정보 입력</h2>
+                <h2 className={cn(text.sectionTitle, "mb-4")}>여행 정보 입력</h2>
 
                 <form onSubmit={handleCreateTrip} className="space-y-4">
                   {/* 여행 이름 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">여행 이름 *</label>
+                    <label className={cn(text.label, "mb-1")}>여행 이름 *</label>
                     <input
                       type="text"
                       value={formData.name}
@@ -212,7 +208,7 @@ export default function SelectTripPage() {
 
                   {/* 여행 타입 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">타입 *</label>
+                    <label className={cn(text.label, "mb-1")}>타입 *</label>
                     <div className="flex gap-4">
                       <label className="flex items-center">
                         <input
@@ -249,7 +245,7 @@ export default function SelectTripPage() {
 
                   {/* 일수 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">일수 (1-10일) *</label>
+                    <label className={cn(text.label, "mb-1")}>일수 (1-10일) *</label>
                     <input
                       type="number"
                       min="1"

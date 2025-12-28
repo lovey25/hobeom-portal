@@ -1,5 +1,6 @@
 import React from "react";
 import { TravelItem } from "@/types";
+import { text, badge, button, cn } from "@/styles/design-system";
 
 interface ItemCardProps {
   item: TravelItem;
@@ -82,13 +83,13 @@ export function ItemCard({
         {/* 아이템 정보 */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <h4 className="font-medium text-gray-900">{item.name}</h4>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${getImportanceColor(item.importance)}`}>
+            <h4 className={text.cardTitle}>{item.name}</h4>
+            <span className={cn("px-2 py-0.5 rounded text-xs font-medium", getImportanceColor(item.importance))}>
               {getImportanceText(item.importance)}
             </span>
           </div>
 
-          <div className="text-xs text-gray-500 space-y-1">
+          <div className={cn(text.hint, "space-y-1")}>
             <div>
               크기: {item.width}×{item.height}×{item.depth}cm | 무게:{" "}
               {showWeightInGrams ? `${item.weight}g` : `${(item.weight / 1000).toFixed(2)}kg`}

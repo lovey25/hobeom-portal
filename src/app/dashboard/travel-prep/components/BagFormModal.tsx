@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bag } from "@/types";
+import { text, button, form, cn } from "@/styles/design-system";
 
 interface BagFormModalProps {
   isOpen: boolean;
@@ -77,12 +78,12 @@ export function BagFormModal({ isOpen, onClose, onSave, bag }: BagFormModalProps
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">{bag ? "가방 수정" : "가방 추가"}</h2>
+          <h2 className={cn(text.sectionTitle, "mb-4")}>{bag ? "가방 수정" : "가방 추가"}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 이름 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이름 *</label>
+              <label className={cn(text.label, "mb-1")}>이름 *</label>
               <input
                 type="text"
                 value={formData.name || ""}

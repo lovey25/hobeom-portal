@@ -1,5 +1,6 @@
 import React from "react";
 import { BagStats } from "@/types";
+import { text, badge, cn } from "@/styles/design-system";
 
 interface BagCardProps {
   stats: BagStats;
@@ -23,8 +24,8 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
     >
       {/* 가방 이름 및 무게 */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-gray-900">{bag.name}</h3>
-        <span className={`text-sm font-medium ${isOverloaded ? "text-red-600" : "text-gray-600"}`}>
+        <h3 className={text.cardTitle}>{bag.name}</h3>
+        <span className={cn("text-sm font-medium", isOverloaded ? "text-red-600" : "text-gray-600")}>
           {(totalWeight / 1000).toFixed(2)}kg
         </span>
       </div>
@@ -40,8 +41,8 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
           />
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-500">포화도</span>
-          <span className={isOverloaded ? "text-red-600 font-semibold" : "text-gray-600"}>
+          <span className={text.hint}>포화도</span>
+          <span className={cn(isOverloaded ? "text-red-600 font-semibold" : "text-gray-600")}>
             {saturation.toFixed(0)}%
           </span>
         </div>
@@ -50,7 +51,7 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
       {/* 상세 정보 (선택적) */}
       {showDetails && (
         <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className={cn("flex items-center justify-between", text.hint)}>
             <div>
               크기: {bag.width}×{bag.height}×{bag.depth}cm
             </div>

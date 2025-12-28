@@ -11,6 +11,7 @@ import { ItemCard } from "./components/ItemCard";
 import { ItemFormModal } from "./components/ItemFormModal";
 import { cookieUtils } from "@/lib/cookies";
 import { TripList, TripItem, TravelItem, BagStats, TripItemFilter } from "@/types";
+import { layout, text, state, button, badge, cn } from "@/styles/design-system";
 
 export default function TravelPrepPage() {
   const router = useRouter();
@@ -552,15 +553,10 @@ export default function TravelPrepPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
-              </div>
-            </div>
-          </div>
+        <div className={layout.page}>
+          <main className={layout.container}>
+            <p className={state.loading}>로딩 중...</p>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -572,7 +568,7 @@ export default function TravelPrepPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className={layout.page}>
         {/* 퀵 네비게이션 - 스크롤 시 동적 표시 */}
         <div
           className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md transition-all duration-300 ${
