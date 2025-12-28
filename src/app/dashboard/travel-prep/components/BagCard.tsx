@@ -11,7 +11,9 @@ interface BagCardProps {
 
 export function BagCard({ stats, isSelected, onClick, showDetails = false }: BagCardProps) {
   const { bag, totalWeight, saturation } = stats;
-  const isOverloaded = saturation >= 100;
+  const safeTotalWeight = totalWeight ?? 0;
+  const safeSaturation = saturation ?? 0;
+  const isOverloaded = safeSaturation >= 100;
 
   return (
     <div
@@ -26,7 +28,7 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
       <div className="flex items-center justify-between mb-2">
         <h3 className={text.cardTitle}>{bag.name}</h3>
         <span className={cn("text-sm font-medium", isOverloaded ? "text-red-600" : "text-gray-600")}>
-          {(totalWeight / 1000).toFixed(2)}kg
+          {(safeTotalWeight / 1000).toFixed(2)}kg
         </span>
       </div>
 
@@ -35,15 +37,15 @@ export function BagCard({ stats, isSelected, onClick, showDetails = false }: Bag
         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
             className={`h-full transition-all duration-300 ${
-              isOverloaded ? "bg-red-500" : saturation > 80 ? "bg-yellow-500" : "bg-green-500"
+              isOverloaded ? "bg-red-500" : safeSaturation > 80 ? "bg-yellow-500" : "bg-green-500"
             }`}
-            style={{ width: `${Math.min(saturation, 100)}%` }}
+            style={{ width: `${Math.min(safeSaturation, 100)}%` }}
           />
         </div>
         <div className="flex justify-between text-xs">
           <span className={text.hint}>포화도</span>
           <span className={cn(isOverloaded ? "text-red-600 font-semibold" : "text-gray-600")}>
-            {saturation.toFixed(0)}%
+            {safeSaturation.toFixed(0)}%
           </span>
         </div>
       </div>

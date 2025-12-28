@@ -423,7 +423,7 @@ export default function DailyTasksPage() {
 
                   <div className="h-full flex items-end justify-between gap-1">
                     {stats.map((stat, index) => {
-                      const rate = parseFloat(stat.completionRate.toString());
+                      const rate = stat.completionRate;
                       const height = Math.max(rate, 2); // 최소 2% 높이 보장
 
                       // 완료율에 따른 색상 결정

@@ -155,7 +155,7 @@ export async function PATCH(request: NextRequest) {
       data: {
         totalTasks,
         completedTasks,
-        completionRate: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : "0.00",
+        completionRate: totalTasks > 0 ? parseFloat(((completedTasks / totalTasks) * 100).toFixed(2)) : 0,
       },
     };
 

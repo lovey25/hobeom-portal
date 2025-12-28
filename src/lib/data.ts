@@ -987,7 +987,8 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
         (sum, item) => sum + item.width * item.height * item.depth * item.quantity,
         0
       );
-      const saturation = Math.min((usedVolume / bagVolume) * volumeRatio * 100, 100);
+      // bagVolume이 0인 경우 포화도는 0으로 설정 (NaN 방지)
+      const saturation = bagVolume > 0 ? Math.min((usedVolume / bagVolume) * volumeRatio * 100, 100) : 0;
 
       stats.push({
         bagId: bag.id,
