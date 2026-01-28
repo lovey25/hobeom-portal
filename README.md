@@ -163,7 +163,108 @@ npm run push-scheduler
 - 관리자: `admin / password`
 - 일반 사용자: `user1 / password`, `demo / password`
 
-## 🔧 확장하기
+## 배포 가이드 (PM2)
+
+### PM2 설치
+
+```bash
+# 글로벌 설치
+npm install -g pm2
+
+# PM2+ 가입 (선택사항)
+pm2 link
+```
+
+### 프로덕션 빌드
+
+```bash
+# 필요한 환경변수 설정
+export JWT_SECRET="your-production-secret-key"
+export NODE_ENV=production
+
+# 빌드 실행
+npm run build
+```
+
+### 서비스 시작
+
+```bash
+# PM2로 서비스 시작
+pm2 start npm --name "hobeom-portal" -- start
+
+# 또는 특정 포트 지정
+pm2 start npm --name "hobeom-portal" -- start -- -p 3000
+```
+
+### 서비스 관리 명령어
+
+```bash
+# 상태 확인
+pm2 status
+
+# 로그 확인
+pm2 logs hobeom-portal
+
+# 실시간 모니터링
+pm2 monit
+
+# 서비스 중지
+pm2 stop hobeom-portal
+
+# 서비스 재시작
+pm2 restart hobeom-portal
+
+# 서비스 재로드 (무중단 배포)
+pm2 reload hobeom-portal
+
+# 서비스 삭제
+pm2 delete hobeom-portal
+```
+
+### 시스템 부팅 시 자동 시작
+
+```bash
+# PM2 시작 스크립트 생성
+pm2 startup
+
+# 현재 PM2 프로세스 저장
+pm2 save
+
+# 저장된 프로세스 복원
+pm2 resurrect
+```
+
+### 환경변수 관리
+
+PM2 에코시스템 파일(`ecosystem.config.js`)을 사용한 정식 배포:
+
+```bash
+# 에코시스템 파일로 시작
+pm2 start ecosystem.config.js --env production
+
+# 수정 후 재시작
+pm2 restart ecosystem.config.js --env production
+```
+
+### 배포 워크플로우
+
+```bash
+# 1. 코드 업데이트 후 빌드
+git pull
+npm install
+npm run build
+
+# 2. PM2로 재로드 (무중단 배포)
+pm2 reload hobeom-portal
+
+# 3. 상태 확인
+pm2 status
+pm2 logs hobeom-portal
+```
+
+📖 **상세 가이드:** [배포 문서](docs/deployment.md)
+
+## �🔧 확장하기
 
 ### 새로운 앱 추가 5단계
 

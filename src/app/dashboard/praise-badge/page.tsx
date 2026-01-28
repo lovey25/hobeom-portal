@@ -549,8 +549,8 @@ export default function PraiseBadgePage() {
                   redemption.status === "pending"
                     ? "승인 대기"
                     : redemption.status === "approved"
-                    ? "승인 완료"
-                    : "완료";
+                      ? "승인 완료"
+                      : "완료";
 
                 return (
                   <div key={redemption.id} className="p-4 border border-gray-200 rounded-lg">
@@ -720,8 +720,8 @@ export default function PraiseBadgePage() {
                   redemption.status === "pending"
                     ? "승인 대기"
                     : redemption.status === "approved"
-                    ? "승인 완료"
-                    : "완료";
+                      ? "승인 완료"
+                      : "완료";
 
                 return (
                   <div key={redemption.id} className="p-4 border border-gray-200 rounded-lg">

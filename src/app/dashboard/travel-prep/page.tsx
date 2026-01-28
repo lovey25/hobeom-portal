@@ -785,9 +785,7 @@ export default function TravelPrepPage() {
                       .filter((item) => item.itemType === "item" && !item.bagId)
                       .reduce((sum, item) => {
                         const travelItem = allTravelItems.find((ti) => ti.id === item.itemId);
-                        const volume = travelItem
-                          ? (travelItem.width * travelItem.height * travelItem.depth) / 1000
-                          : 0;
+                        const volume = travelItem ? travelItem.width * travelItem.height * travelItem.depth : 0;
                         return sum + volume * item.quantity;
                       }, 0),
                     saturation: 0,

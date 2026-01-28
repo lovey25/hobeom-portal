@@ -8,7 +8,7 @@
     "dev:next": "NODE_ENV=development next dev --turbopack",
     "dev:push": "NODE_ENV=development nodemon scripts/push-scheduler.js",
     "start": "concurrently \"npm run prod:next\" \"npm run prod:push\" --names \"NEXT,PUSH\" --prefix-colors \"cyan,magenta\"",
-    "build": "NODE_ENV=production next build --turbopack",
+    "build": "NODE_ENV=production next build",
     "prod:next": "NODE_ENV=production next start -p 3002",
     "prod:push": "NODE_ENV=production node scripts/push-scheduler.js",
     "lint": "eslint",

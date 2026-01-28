@@ -112,14 +112,20 @@ function mapRawUser(rawUser: Record<string, string>): User {
 }
 
 // Utility function to map raw travel item data
+// 안전한 숫자 파싱 (빈 문자열이나 NaN은 0으로 처리)
+function safeParseFloat(value: string | undefined): number {
+  const parsed = parseFloat(value || "");
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 function mapRawTravelItem(item: Record<string, string>): TravelItem {
   return {
     id: item.id,
     name: item.name,
-    width: parseFloat(item.width),
-    height: parseFloat(item.height),
-    depth: parseFloat(item.depth),
-    weight: parseFloat(item.weight),
+    width: safeParseFloat(item.width),
+    height: safeParseFloat(item.height),
+    depth: safeParseFloat(item.depth),
+    weight: safeParseFloat(item.weight),
     category: item.category,
     importance: parseInt(item.importance),
     isActive: item.is_active === "true",
@@ -708,7 +714,7 @@ export async function getTripItems(tripListId: string): Promise<TripItem[]> {
         tripListId: item.trip_list_id,
         itemId: item.item_id,
         itemType: item.item_type as "item" | "bag",
-        bagId: item.bag_id || undefined,
+        bagId: item.bag_id && item.bag_id.trim() !== "" ? item.bag_id.trim() : undefined,
         isPrepared: item.is_prepared === "true",
         quantity: parseInt(item.quantity) || 1,
         order: parseInt(item.order),
@@ -963,7 +969,7 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
       if (!bag) continue;
 
       // 이 가방에 담긴 아이템들
-      const itemsInBag = tripItems.filter((item) => item.itemType === "item" && item.bagId === bagItem.itemId);
+      const itemsInBag = tripItems.filter((item) => item.itemType === "item" && item.bagId === bag.id);
 
       const itemsWithDetails = itemsInBag
         .map((tripItem) => {
@@ -983,10 +989,11 @@ export async function calculateBagStats(tripListId: string, volumeRatio = 0.7): 
 
       // 부피 계산 (수량 반영)
       const bagVolume = bag.width * bag.height * bag.depth;
-      const usedVolume = itemsWithDetails.reduce(
-        (sum, item) => sum + item.width * item.height * item.depth * item.quantity,
-        0
-      );
+      const usedVolume = itemsWithDetails.reduce((sum, item) => {
+        // width, height, depth 중 하나라도 유효하지 않으면 0으로 처리 (NaN 방지)
+        const itemVolume = item.width && item.height && item.depth ? item.width * item.height * item.depth : 0;
+        return sum + itemVolume * item.quantity;
+      }, 0);
       // bagVolume이 0인 경우 포화도는 0으로 설정 (NaN 방지)
       const saturation = bagVolume > 0 ? Math.min((usedVolume / bagVolume) * volumeRatio * 100, 100) : 0;
 
