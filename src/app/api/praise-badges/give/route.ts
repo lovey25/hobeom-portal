@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { readCSV, writeCSV } from "@/lib/data";
+import { readCSV, writeCSV, getAllUsers, getPushSubscriptions } from "@/lib/data";
+import { sendPushNotification } from "@/lib/push";
 import { PraiseBadge, PraiseHistory, ApiResponse } from "@/types";
 
 /**
@@ -82,6 +83,37 @@ export async function POST(request: NextRequest) {
     };
     history.push(historyEntry);
     await writeCSV("praise-history.csv", history);
+
+    // 수신자에게 푸시 알림 전송 (실패해도 메인 응답에 영향 없음)
+    try {
+      const subscriptions = await getPushSubscriptions(userId);
+      if (subscriptions.length > 0) {
+        const allUsers = await getAllUsers();
+        const giver = allUsers.find((u) => u.id === decoded.id);
+        const giverName = giver?.name || giver?.username || "관리자";
+
+        const isBadgeCompleted = userBadge.currentPoints === 0;
+        const notificationTitle = isBadgeCompleted ? "🏅 칭찬 뱃지 완성!" : "🌟 칭찬을 받았어요!";
+        const notificationBody = isBadgeCompleted
+          ? `${giverName}님 덕분에 뱃지를 완성했어요! (총 ${userBadge.completedBadges}개)`
+          : `${giverName}님이 칭찬을 보내주셨어요! (${userBadge.currentPoints}/4 포인트)`;
+
+        await Promise.allSettled(
+          subscriptions.map((sub) =>
+            sendPushNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh_key || "", auth: sub.auth_key || "" } },
+              {
+                title: notificationTitle,
+                body: notificationBody,
+                data: { url: "/dashboard/praise-badge", type: "praise-received" },
+              },
+            ),
+          ),
+        );
+      }
+    } catch (pushError) {
+      console.error("칭찬 푸시 알림 전송 오류:", pushError);
+    }
 
     const response: ApiResponse<PraiseBadge> = {
       success: true,

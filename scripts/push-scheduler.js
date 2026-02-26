@@ -366,17 +366,6 @@ async function checkAndSendNotifications() {
               if (result && result.success) {
                 markAsNotified(userId, notifyKey);
                 console.log(`   ✅ 전송 성공 (${usedImpl}) → ${endpointSnippet}...`);
-                // activity-logs에 기록
-                try {
-                  await appendActivityLog(
-                    userId,
-                    "push_sent",
-                    `리마인더 알림 전송(${matchedReminderTime}) - ${message.title}`,
-                    5
-                  );
-                } catch (e) {
-                  console.error("[activity-log] 리마인더 기록 실패:", e && e.message ? e.message : e);
-                }
               } else {
                 const errMsg =
                   result && (result.message || result.error) ? result.message || result.error : JSON.stringify(result);
@@ -425,7 +414,7 @@ async function checkAndSendNotifications() {
                       userId,
                       "push_sent",
                       `여행 준비 알림 전송(${trip.name}) (D-${daysUntil})`,
-                      6
+                      6,
                     );
                   } catch (e) {
                     console.error("[activity-log] 여행 알림 기록 실패:", e && e.message ? e.message : e);
@@ -441,7 +430,7 @@ async function checkAndSendNotifications() {
                 const endpointSnippet = (subscription.endpoint || "").substring(0, 80);
                 console.error(
                   `   ❌ 전송 중 예외 발생 → ${endpointSnippet}...:`,
-                  err && err.message ? err.message : err
+                  err && err.message ? err.message : err,
                 );
               }
             }
