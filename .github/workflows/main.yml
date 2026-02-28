@@ -1,0 +1,40 @@
+name: Deploy to Server
+
+on:
+  workflow_dispatch: # 수동 실행만 가능하도록 변경
+  # push:
+  #   branches: [main] # 자동 배포 재개 시 주석 해제
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # GitHub 호스트에서 실행
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18" # or your required version
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
+            ${{ secrets.USERNAME }}@${{ secrets.HOST }} "bash -l -c '
+            cd /home/${{ secrets.USERNAME }}/Workspace/dma-ts && \
+            git fetch origin && \
+            git reset --hard origin/main && \
+            git clean -fd && \
+            source ~/.nvm/nvm.sh && \
+            npm install && \
+            npm run build && \
+            npm prune --production && \
+            pm2 reload all
+          '"
