@@ -7,15 +7,10 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # GitHub 호스트에서 실행
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18" # or your required version
+        uses: actions/checkout@v4
 
       - name: Set up SSH
         run: |
@@ -26,15 +21,16 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
+          ssh -i ~/.ssh/id_rsa \
             ${{ secrets.USERNAME }}@${{ secrets.HOST }} "bash -l -c '
-            cd /home/${{ secrets.USERNAME }}/Workspace/dma-ts && \
+            set -e && \
+            cd /home/${{ secrets.USERNAME }}/Workspace/hobeom-portal && \
             git fetch origin && \
             git reset --hard origin/main && \
             git clean -fd && \
             source ~/.nvm/nvm.sh && \
-            npm install && \
+            nvm use && \
+            npm ci && \
             npm run build && \
-            npm prune --production && \
-            pm2 reload all
+            pm2 reload hobeom-portal
           '"
