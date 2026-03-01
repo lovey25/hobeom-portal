@@ -1,9 +1,9 @@
 name: Deploy to Server
 
 on:
-  workflow_dispatch: # 수동 실행만 가능하도록 변경
-  # push:
-  #   branches: [main] # 자동 배포 재개 시 주석 해제
+  # workflow_dispatch: # 수동 실행만 가능하도록 변경
+  push:
+    branches: [main] # 자동 배포 재개 시 주석 해제
 
 jobs:
   deploy:
