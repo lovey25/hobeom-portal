@@ -576,29 +576,66 @@ export default function PraiseBadgePage() {
   };
 
   const renderGiverView = () => {
+    // 최근 5개의 칭찬 메시지 추출 (중복 제거)
+    const recentMessages = Array.from(
+      new Set(
+        giverHistory
+          .filter((h: any) => h.comment && h.comment.trim())
+          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .map((h: any) => h.comment),
+      ),
+    ).slice(0, 5);
+
     return (
       <div className="space-y-6">
         <Card>
           <h2 className={text.cardTitle}>🎉 칭찬 주기</h2>
           <div className="space-y-4">
-            <Select
-              label="칭찬할 사람 선택"
-              value={selectedReceiver}
-              onChange={(e) => setSelectedReceiver(e.target.value)}
-            >
-              <option value="">선택해주세요</option>
-              {receivers.map((receiver) => {
-                const badge = receiverBadges.find((b) => b.userId === receiver.id);
-                const badgeInfo = badge
-                  ? ` (진행중: ${badge.currentPoints}/4, 완성: ${badge.completedBadges}개)`
-                  : " (뱃지 없음)";
-                return (
-                  <option key={receiver.id} value={receiver.id}>
-                    {receiver.name} ({receiver.username}){badgeInfo}
-                  </option>
-                );
-              })}
-            </Select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">칭찬할 사람 선택</label>
+              <div className="grid grid-cols-2 gap-2">
+                {receivers.map((receiver) => {
+                  const badge = receiverBadges.find((b) => b.userId === receiver.id);
+                  const isSelected = selectedReceiver === receiver.id;
+
+                  return (
+                    <button
+                      key={receiver.id}
+                      onClick={() => setSelectedReceiver(receiver.id)}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900">{receiver.name}</div>
+                      <div className={text.tertiary + " text-xs"}>@{receiver.username}</div>
+                      <div className="mt-1 flex items-center gap-2 text-xs">
+                        <span className="text-yellow-600">진행: {badge?.currentPoints || 0}/4</span>
+                        <span className="text-blue-600">완성: {badge?.completedBadges || 0}개</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {recentMessages.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">최근 칭찬 메시지</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {recentMessages.map((message, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setPraiseMessage(message)}
+                      className="px-3 py-4 min-h-[72px] text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all text-left flex items-center justify-center"
+                    >
+                      <span className="line-clamp-3 text-center">
+                        {message.length > 30 ? message.substring(0, 30) + "..." : message}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Textarea
               label="칭찬 메시지 (선택사항)"
