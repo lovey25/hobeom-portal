@@ -1,13 +1,21 @@
 // Service Worker for Push Notifications
 // 호범 포털 알림 서비스
 
-// const CACHE_NAME = "hobeom-portal-v1"; // Reserved for future caching strategy
+const CACHE_NAME = "hobeom-portal-v1";
+const CORE_ASSETS = ["/", "/manifest.json", "/icon-192x192.png", "/icon-512x512.png"];
 const NOTIFICATION_TAG_PREFIX = "hobeom-notification-";
 
 // Service Worker 설치
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   console.log("[SW] Service Worker installing...");
-  // 즉시 활성화
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(CORE_ASSETS))
+      .catch((error) => {
+        console.warn("[SW] Core assets cache failed:", error);
+      }),
+  );
   self.skipWaiting();
 });
 
@@ -40,7 +48,7 @@ self.addEventListener("notificationclick", (event) => {
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
-    })
+    }),
   );
 });
 
@@ -77,7 +85,7 @@ self.addEventListener("push", (event) => {
         })
         .catch((error) => {
           console.error("[SW] Failed to show default notification:", error);
-        })
+        }),
     );
     return;
   }
@@ -110,7 +118,7 @@ self.addEventListener("push", (event) => {
           console.error("[SW] Failed to show notification:", error);
           // 권한 재확인
           console.log("[SW] Current permission status:", Notification.permission);
-        })
+        }),
     );
   } catch (error) {
     console.error("[SW] Error parsing push data:", error);
@@ -129,15 +137,46 @@ self.addEventListener("push", (event) => {
         })
         .catch((error) => {
           console.error("[SW] Failed to show fallback notification:", error);
-        })
+        }),
     );
   }
 });
 
 // Fetch 이벤트 (선택 사항 - 오프라인 지원)
-self.addEventListener("fetch", () => {
-  // 현재는 네트워크 우선 전략 사용
-  // 향후 캐싱 전략 추가 가능
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") {
+    return;
+  }
+
+  event.respondWith(
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+
+      try {
+        const networkResponse = await fetch(event.request);
+
+        if (event.request.url.startsWith(self.location.origin)) {
+          cache.put(event.request, networkResponse.clone());
+        }
+
+        return networkResponse;
+      } catch (error) {
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        if (event.request.mode === "navigate") {
+          const fallback = await cache.match("/");
+          if (fallback) {
+            return fallback;
+          }
+        }
+
+        throw error;
+      }
+    })(),
+  );
 });
 
 console.log("[SW] Service Worker loaded");

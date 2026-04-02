@@ -1,7 +1,9 @@
 {
+  "id": "/",
   "name": "호범 포털",
   "short_name": "호범 포털",
   "description": "여러 기능을 통합한 현대적인 웹 포털 플랫폼",
+  "privacy_policy": "/privacy",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

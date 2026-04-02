@@ -177,6 +177,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-gray-500 text-sm">
             <p>&copy; 2025 호범 포털. 모든 권리 보유.</p>
+            <p className="mt-2">
+              <Link href="/privacy" className="text-blue-600 hover:underline">
+                개인정보 처리방침
+              </Link>
+            </p>
             <p className="mt-2">Next.js 15 + TypeScript로 구축된 현대적 웹 포털</p>
           </div>
         </div>
