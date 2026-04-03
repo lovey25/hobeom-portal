@@ -1,6 +1,6 @@
 {
   "name": "hobeom-portal",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "init": "bash scripts/init.sh",
@@ -8,7 +8,7 @@
     "dev:next": "NODE_ENV=development next dev --turbopack",
     "dev:push": "NODE_ENV=development nodemon scripts/push-scheduler.js",
     "start": "concurrently \"npm run prod:next\" \"npm run prod:push\" --names \"NEXT,PUSH\" --prefix-colors \"cyan,magenta\"",
-    "build": "NODE_ENV=production next build",
+    "build": "NODE_ENV=production next build --turbopack",
     "prod:next": "NODE_ENV=production next start -p 3002",
     "prod:push": "NODE_ENV=production node scripts/push-scheduler.js",
     "lint": "eslint",
@@ -16,37 +16,40 @@
     "push-scheduler": "node scripts/push-scheduler.js"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "better-sqlite3": "^12.5.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.8.0",
     "csv-parser": "^3.2.0",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.0",
     "js-cookie": "^3.0.5",
-    "jsonwebtoken": "^9.0.2",
-    "next": "^16.0.7",
+    "jsonwebtoken": "^9.0.3",
+    "next": "^16.2.2",
     "node-cron": "^4.2.1",
     "papaparse": "^5.5.3",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@eslint/eslintrc": "^3.3.5",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/js-cookie": "^3.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.16",
-    "@types/react": "^19.2.7",
+    "@types/node": "^22",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
     "concurrently": "^9.2.1",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.4",
-    "nodemon": "^3.0.0",
-    "tailwindcss": "^4",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.2",
+    "nodemon": "^3.1.14",
+    "tailwindcss": "^4.2.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }
