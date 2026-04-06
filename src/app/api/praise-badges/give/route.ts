@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { readCSV, writeCSV, getAllUsers, getPushSubscriptions } from "@/lib/data";
 import { sendPushNotification } from "@/lib/push";
-import { PraiseBadge, PraiseHistory, ApiResponse } from "@/types";
+import { PraiseBadge, PraiseHistory, PraiseMapping, ApiResponse } from "@/types";
 
 /**
  * POST /api/praise-badges/give
- * 관리자가 사용자에게 칭찬 주기
+ * 매핑 관계가 있는 사용자에게 칭찬 주기
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +21,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 401 });
     }
 
-    if (decoded.role !== "admin") {
-      const response: ApiResponse = {
-        success: false,
-        message: "관리자 권한이 필요합니다.",
-      };
-      return NextResponse.json(response, { status: 403 });
-    }
-
     const body = await request.json();
     const { userId, comment } = body;
 
@@ -38,6 +30,27 @@ export async function POST(request: NextRequest) {
         message: "사용자 ID가 필요합니다.",
       };
       return NextResponse.json(response, { status: 400 });
+    }
+
+    if (decoded.id === userId) {
+      const response: ApiResponse = {
+        success: false,
+        message: "자기 자신에게 칭찬을 줄 수 없습니다.",
+      };
+      return NextResponse.json(response, { status: 400 });
+    }
+
+    const mappings = await readCSV<PraiseMapping>("praise-mappings.csv");
+    const canGivePraise = mappings.some(
+      (mapping) => mapping.isActive && mapping.giverUserId === decoded.id && mapping.receiverUserId === userId,
+    );
+
+    if (!canGivePraise) {
+      const response: ApiResponse = {
+        success: false,
+        message: "칭찬 권한이 없습니다.",
+      };
+      return NextResponse.json(response, { status: 403 });
     }
 
     // 칭찬뱃지 현황 조회
