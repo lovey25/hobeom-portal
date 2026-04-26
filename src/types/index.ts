@@ -374,3 +374,31 @@ export interface Comment {
   createdAt: string;
   updatedAt: string;
 }
+
+// ============================================
+// Growth Records App Types (Google Sheets 기반)
+// ============================================
+
+/**
+ * 자녀 프로필 (성장 기록 대상)
+ */
+export interface ChildProfile {
+  name: string;
+  gender: "M" | "F";
+  birthDate: string; // YYYY-MM-DD
+}
+
+/**
+ * 한 회 측정 기록
+ * rowIndex 는 Google Sheets 의 1-based 행 번호 (수정·삭제 시 키로 사용)
+ */
+export interface GrowthRecord {
+  rowIndex: number;
+  date: string; // YYYY-MM-DD
+  heightCm: number;
+  weightKg: number;
+  ageMonths: number;
+  createdBy: string;
+  memo: string;
+  createdAt: string;
+}

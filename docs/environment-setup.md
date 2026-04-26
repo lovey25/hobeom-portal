@@ -97,17 +97,28 @@ NEXT_PUBLIC_API_URL=https://portal.everyx.net
 JWT_SECRET=운영용-강력한-시크릿-키 # ⚠️ 배포 전 반드시 변경!
 ```
 
+### 기능별 추가 환경 변수 (`.env.local`)
+
+| 기능 | 변수 | 비고 |
+| ---- | ---- | ---- |
+| 웹 푸시 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `node scripts/generate-vapid-keys.js` 로 발급. 푸시 스케줄러도 같은 변수 사용 |
+| 성장기록 | `GOOGLE_SHEETS_ID` | 대상 스프레드시트 URL의 `/d/{ID}/edit` 부분 |
+| 성장기록 | `GOOGLE_SERVICE_ACCOUNT_KEY` | Service Account JSON 전체를 한 줄로. `private_key` 의 `\n` 은 그대로 유지 |
+
+성장기록 환경 설정 절차는 [성장기록 README](../src/app/dashboard/growth-records/README.md) 참고.
+
 ## 💾 데이터 관리
 
-모든 환경은 **동일한 `./data/` 디렉토리**의 CSV 파일을 사용합니다.
+모든 환경은 **동일한 `./data/` 디렉토리**의 CSV 파일과 SQLite DB를 공유합니다. 성장기록 데이터는 외부 Google Sheets에 있으므로 환경 간 분리되지 않습니다 — 별도 시트를 사용하려면 `GOOGLE_SHEETS_ID` 를 환경별로 다르게 지정하세요.
 
-```
+```text
 data/
 ├── users.csv
 ├── apps.csv
 ├── bags.csv
 ├── praise-badges.csv
 ├── daily-tasks.csv
+├── cafe.db        # SQLite (카페 게시판)
 └── ... (다른 CSV 파일들)
 ```
 

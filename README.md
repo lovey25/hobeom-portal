@@ -1,6 +1,6 @@
 # 🏠 호범 포털 (Hobeom Portal)
 
-Next.js 15와 React 19로 구축한 모던 웹 포털 플랫폼
+Next.js 16과 React 19로 구축한 모던 웹 포털 플랫폼
 
 ## ✨ 주요 기능
 
@@ -10,13 +10,16 @@ Next.js 15와 React 19로 구축한 모던 웹 포털 플랫폼
 - **메모장**: 로컬 스토리지 기반 메모 관리
 - **날씨**: 날씨 정보 조회
 
-### � 대시보드 앱 (로그인 필요)
+### 🔐 대시보드 앱 (로그인 필요)
 
 **사용자 앱:**
 
+- **오늘할일**: 매일 할일 관리 및 완료율 추적
 - **여행 준비**: 여행별 준비물 체크리스트 (가방 배정, 그룹화)
+- **칭찬뱃지**: 칭찬을 모아 보상받기
+- **카페**: 게시판 및 커뮤니티 (SQLite)
+- **성장기록**: 자녀 키·몸무게 성장 곡선 관리 (Google Sheets 연동)
 - **설정**: 프로필, 표시, 알림, 푸시 구독 관리
-- **할일 현황**: 할일 통계 대시보드
 
 **관리자 전용:**
 
@@ -42,20 +45,7 @@ Next.js 15와 React 19로 구축한 모던 웹 포털 플랫폼
 
 [→ 샘플 앱 상세 문서](src/app/samples/README.md)
 
-### 🔐 대시보드 앱 (로그인 필요)
-
-- **여행 준비**: 체크리스트, 가방 패킹, 무게/부피 자동 계산, 아코디언 그룹화 [→ 상세](src/app/dashboard/travel-prep/README.md)
-- **사용자 관리**: 사용자 및 권한 관리 [→ 상세](src/app/dashboard/users/README.md)
-
-### 👑 관리자 앱 (Admin Only)
-
-- **CSV 편집기**: 데이터 파일 직접 편집 (엑셀 스타일 스프레드시트)
-  - 클릭/더블클릭 모드 (선택/편집)
-  - 키보드 네비게이션 (방향키, Tab, Enter)
-  - 컬럼 정렬 및 리사이징
-  - 자동 백업 기능
-
-## � 빠른 시작
+## 🚀 빠른 시작
 
 ```bash
 # 의존성 설치
@@ -75,12 +65,17 @@ npm run dev
 
 📖 **상세 가이드:** [시작하기](docs/getting-started.md)
 
-## �🛠️ 기술 스택
+## 🛠️ 기술 스택
 
-- **Frontend**: Next.js 15, React 19, TypeScript
+- **Frontend**: Next.js 16, React 19, TypeScript (strict)
 - **Styling**: Tailwind CSS v4
+- **Charts**: recharts (성장기록 그래프)
 - **Authentication**: JWT with bcrypt
-- **Data Storage**: CSV files (확장 가능)
+- **Data Storage**:
+  - CSV (대부분의 도메인) — `src/lib/data.ts`
+  - SQLite / better-sqlite3 (카페 게시판) — `data/cafe.db`
+  - Google Sheets API (성장기록) — `googleapis` Service Account
+- **Push**: Web Push (VAPID) + node-cron 스케줄러
 - **Build Tool**: Turbopack
 
 ## 📁 프로젝트 구조
@@ -90,8 +85,14 @@ src/
 ├── app/
 │   ├── api/              # REST API 엔드포인트
 │   ├── dashboard/        # 대시보드 앱들
-│   │   ├── travel-prep/  # 여행 준비 앱 (+ README.md)
-│   │   └── users/        # 사용자 관리 (+ README.md)
+│   │   ├── daily-tasks/      # 오늘할일
+│   │   ├── travel-prep/      # 여행 준비 앱 (+ README.md)
+│   │   ├── praise-badge/     # 칭찬뱃지 (+ README.md)
+│   │   ├── growth-records/   # 성장 기록 관리 (+ README.md)
+│   │   ├── csv-editor/       # CSV 편집기 (관리자)
+│   │   ├── users/            # 사용자 관리 (관리자)
+│   │   └── settings/         # 설정 (+ README.md)
+│   ├── cafe/             # 카페(게시판, SQLite)
 │   ├── samples/          # 퍼블릭 샘플 앱들 (+ README.md)
 │   └── page.tsx          # 랜딩 페이지
 ├── components/           # 재사용 컴포넌트
@@ -102,10 +103,12 @@ src/
 │   └── design-system.ts  # 중앙 집중식 스타일 관리
 ├── lib/                  # 유틸리티 함수
 │   ├── apiHelpers.ts     # API 헬퍼 함수
-│   └── data.ts           # 데이터 처리 함수
+│   ├── data.ts           # CSV 데이터 액세스
+│   ├── db.ts             # SQLite (카페)
+│   └── sheets/           # Google Sheets 어댑터 (성장기록)
 └── types/                # TypeScript 타입 정의
 
-data/                     # CSV 데이터 파일
+data/                     # CSV 데이터 + cafe.db (SQLite)
 docs/                     # 공통 문서
 ```
 
@@ -127,6 +130,8 @@ docs/                     # 공통 문서
 
 - [설정](src/app/dashboard/settings/README.md) - 프로필, 표시, 알림, Web Push, PWA
 - [여행 준비](src/app/dashboard/travel-prep/README.md) - 준비물 관리, 아코디언 그룹화
+- [칭찬뱃지](src/app/dashboard/praise-badge/README.md) - 칭찬 적립 및 보상 교환
+- [성장기록](src/app/dashboard/growth-records/README.md) - Google Sheets 기반 성장 곡선
 - [사용자 관리](src/app/dashboard/users/README.md) - 권한 관리, CRUD API
 - [CSV 편집기](src/app/dashboard/csv-editor/README.md) - 스프레드시트 인터페이스
 - [할일 현황](src/app/dashboard/daily-tasks/README.md) - 통계 및 현황 대시보드
@@ -139,29 +144,39 @@ docs/                     # 공통 문서
 
 - [샘플 앱들](src/app/samples/README.md) - 계산기, 메모장, 날씨
 
-## � 빠른 시작
+## 🚀 빠른 시작 (상세)
 
 ```bash
 # 1. 의존성 설치
 npm install
 
-# 2. 개발 데이터 초기화
-bash scripts/init-dev.sh
+# 2. 개발 데이터 초기화 (data/*.sample.csv → data/*.csv 복사)
+bash scripts/init.sh
 
-# 3. (선택) VAPID 키 생성 (푸시 알림 사용 시)
+# 3. (선택) VAPID 키 생성 — 푸시 알림 사용 시
 node scripts/generate-vapid-keys.js
 
-# 4. 개발 서버 실행
+# 4. 개발 서버 실행 (Next + Push Scheduler 동시 실행)
 npm run dev
-
-# 5. (선택) 푸시 스케줄러 실행 (백그라운드 알림 사용 시)
-npm run push-scheduler
 ```
 
 **테스트 계정:**
 
 - 관리자: `admin / password`
 - 일반 사용자: `user1 / password`, `demo / password`
+
+### 🔑 환경 변수 (`.env.local`)
+
+[.env.example](.env.example) 을 복사해 채우세요. 모두 선택이지만, 해당 기능을 쓰려면 필요합니다.
+
+| 변수                         | 용도                                       |
+| ---------------------------- | ------------------------------------------ |
+| `JWT_SECRET`                 | 인증 토큰 서명 키 (프로덕션 필수)          |
+| `VAPID_PUBLIC_KEY`           | 웹 푸시 공개 키                            |
+| `VAPID_PRIVATE_KEY`          | 웹 푸시 비공개 키                          |
+| `VAPID_SUBJECT`              | 웹 푸시 연락처 (`mailto:` 형태)            |
+| `GOOGLE_SHEETS_ID`           | 성장기록 대상 스프레드시트 ID              |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | 성장기록 Service Account JSON 전체 (한 줄) |
 
 ## 배포 가이드 (PM2)
 
@@ -264,7 +279,7 @@ pm2 logs hobeom-portal
 
 📖 **상세 가이드:** [배포 문서](docs/deployment.md)
 
-## �🔧 확장하기
+## 🔧 확장하기
 
 ### 새로운 앱 추가 5단계
 
@@ -272,7 +287,10 @@ pm2 logs hobeom-portal
 2. `src/app/{samples|dashboard}/[app-name]/page.tsx` 생성
 3. (필요 시) `src/app/api/[api-name]/route.ts` API 엔드포인트 추가
 4. 앱 폴더에 `README.md` 개발자 문서 작성
-5. 데이터 저장이 필요하면 `data/[table].csv` + `data.ts` 함수 추가
+5. 데이터 저장이 필요하면 다음 중 적절한 레이어 선택
+   - 일반 도메인: `data/[table].csv` + `src/lib/data.ts` 함수 추가
+   - 게시판/관계형 데이터: SQLite (`src/lib/db.ts`)
+   - 외부 협업 데이터: Google Sheets 어댑터 (`src/lib/sheets/`)
 
 ### 🎨 디자인 시스템 사용
 
@@ -306,6 +324,6 @@ import { layout, text, card, table, cn } from "@/styles/design-system";
 
 - CSV 읽기 캐싱 및 쓰기 큐잉으로 성능 최적화
 
-## � 라이센스
+## 📄 라이센스
 
 MIT License

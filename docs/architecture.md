@@ -27,6 +27,8 @@ hobeom-portal/
 │   │   │   ├── users/         # 사용자 관리 (+ README.md)
 │   │   │   ├── csv-editor/    # CSV 편집기 (+ README.md)
 │   │   │   ├── daily-tasks/   # 할일 현황 (+ README.md)
+│   │   │   ├── praise-badge/  # 칭찬뱃지 (+ README.md)
+│   │   │   ├── growth-records/ # 성장기록 (Google Sheets 기반, + README.md)
 │   │   │   └── admin/         # 관리자 전용 앱
 │   │   │       └── push-test/ # 푸시알림테스트 (+ README.md)
 │   │   ├── samples/           # 퍼블릭 샘플 앱들 (+ README.md)
@@ -54,6 +56,11 @@ hobeom-portal/
 │   │   ├── auth.ts           # JWT 인증 유틸
 │   │   ├── cookies.ts        # 쿠키 관리 유틸
 │   │   ├── data.ts           # CSV 데이터 액세스 레이어
+│   │   ├── db.ts             # SQLite (카페 게시판)
+│   │   ├── sheets/           # Google Sheets 어댑터 (성장기록)
+│   │   │   ├── client.ts             # Service Account 인증
+│   │   │   ├── growthAdapter.ts      # 시트 read/append/update/delete
+│   │   │   └── percentile-data.ts    # 표준 성장도표 백분위 (정적)
 │   │   └── device.ts         # 디바이스 감지 유틸
 │   └── types/                 # TypeScript 타입 정의
 │       └── index.ts           # 공통 타입
@@ -187,6 +194,14 @@ if (!decoded) {
 
 ## 📊 데이터 관리
 
+도메인별로 의도적으로 **세 가지 저장소**를 분리해 사용합니다. 새 기능을 추가할 땐 도메인 성격에 맞는 레이어를 선택하고, 명시적 사유 없이 데이터를 다른 레이어로 옮기지 않습니다.
+
+| 레이어 | 위치 | 사용처 |
+| ------ | ---- | ------ |
+| **CSV** | `data/*.csv` + `src/lib/data.ts` | 사용자, 앱, 설정, 여행 준비, 오늘할일, 칭찬뱃지, 푸시 구독, 활동 로그 등 대부분 도메인 |
+| **SQLite** | `data/cafe.db` + `src/lib/db.ts` | 카페 게시판(posts·comments) 한정 |
+| **Google Sheets** | `src/lib/sheets/` (Service Account) | 성장기록 한정 — 시트가 SoT, 마이그레이션 없음 |
+
 ### CSV 기반 저장소
 
 **장점:**
@@ -200,6 +215,19 @@ if (!decoded) {
 - 동시 쓰기 제한 (배치 API로 해결)
 - 대용량 데이터 비효율
 - 관계형 쿼리 제한
+
+### SQLite (카페)
+
+- `better-sqlite3` + WAL 모드.
+- `src/lib/db.ts` import 시 자동으로 테이블 생성.
+- 게시글·댓글처럼 관계형 무결성과 트랜잭션이 필요한 도메인에만 사용.
+
+### Google Sheets (성장기록)
+
+- 인증: Google Cloud Service Account JSON (`GOOGLE_SERVICE_ACCOUNT_KEY`) + 대상 스프레드시트 공유(편집자).
+- 어댑터: [src/lib/sheets/growthAdapter.ts](../src/lib/sheets/growthAdapter.ts) 가 1행 헤더를 읽어 컬럼을 동적으로 매핑하므로, 시트의 컬럼 순서 변경에 강함.
+- 식별자는 시트 행 번호(1-based). 수정·삭제 모두 행 번호 키로 동작.
+- 자녀 프로필은 `설정` 탭, 측정 기록은 `기록` 탭. 자세한 내용은 [성장기록 README](../src/app/dashboard/growth-records/README.md) 참고.
 
 ### 데이터 액세스 레이어
 
@@ -373,6 +401,16 @@ VAPID_SUBJECT=mailto:admin@example.com
 
 서버가 푸시 서비스에 자신을 인증하는 데 사용됩니다.
 
+### Google Sheets 인증 (성장기록)
+
+```bash
+# .env.local
+GOOGLE_SHEETS_ID=<스프레드시트 URL의 /d/{ID}/edit 부분>
+GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}  # JSON 전체 한 줄
+```
+
+Service Account 이메일을 대상 스프레드시트에 **편집자(Editor)** 권한으로 공유해야 동작합니다. 자세한 발급 절차는 [성장기록 README](../src/app/dashboard/growth-records/README.md) 참조.
+
 ### PWA (Progressive Web App)
 
 ```json
@@ -486,4 +524,5 @@ CSV를 데이터베이스로 교체하려면:
 - [여행 준비 앱](../src/app/dashboard/travel-prep/README.md) - 준비물 관리, 그룹화
 - [사용자 관리](../src/app/dashboard/users/README.md) - CRUD, 권한 관리
 - [CSV 편집기](../src/app/dashboard/csv-editor/README.md) - 스프레드시트 인터페이스
+- [성장기록](../src/app/dashboard/growth-records/README.md) - Google Sheets 기반 성장 곡선
 - [푸시알림테스트](../src/app/dashboard/admin/push-test/README.md) - 관리자 푸시 도구

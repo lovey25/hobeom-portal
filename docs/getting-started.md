@@ -4,8 +4,8 @@
 
 ## 📋 사전 요구사항
 
-- **Node.js**: v18 이상
-- **npm**: v9 이상 (또는 yarn, pnpm)
+- **Node.js**: v22 이상 (`.nvmrc` 참고, `package.json` engines 명시)
+- **npm**: v10 이상
 - **Git**: 최신 버전
 
 ## 🛠️ 설치
@@ -25,24 +25,34 @@ npm install
 
 ### 3. 환경 변수 설정 (선택)
 
-`.env.local` 파일을 생성하고 다음 변수를 설정합니다:
+`.env.example` 을 복사해 `.env.local` 을 만들고 필요한 변수만 채웁니다. 사용하는 기능에 따라 항목별로 선택적으로 설정하면 됩니다.
 
 ```bash
-# JWT 시크릿 (프로덕션에서는 필수)
+# 인증 (프로덕션 필수, 개발은 미설정 시 기본값)
 JWT_SECRET=your-secure-jwt-secret-key-here
 
-# 노드 환경
-NODE_ENV=development
+# 웹 푸시 (푸시 알림 사용 시)
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:you@example.com
+
+# Google Sheets — 성장기록 앱 사용 시
+GOOGLE_SHEETS_ID=your-spreadsheet-id-here
+GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 ```
 
-**참고:** `JWT_SECRET`을 설정하지 않으면 기본값이 사용됩니다. 프로덕션 환경에서는 반드시 안전한 시크릿을 설정하세요.
+- `JWT_SECRET`: 프로덕션 배포 전에는 반드시 강력한 랜덤 키로 설정 (`openssl rand -base64 32`).
+- `VAPID_*`: `node scripts/generate-vapid-keys.js` 로 발급. 푸시 스케줄러도 이 변수를 사용.
+- `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY`: [성장기록 README](../src/app/dashboard/growth-records/README.md) 의 Service Account 발급·공유 절차를 따름. JSON은 한 줄로.
 
 ### 4. 데이터 초기화
 
 첫 실행 시 CSV 파일이 자동으로 생성되지만, 수동으로 초기화하려면:
 
 ```bash
-bash scripts/init-dev.sh
+bash scripts/init.sh
+# 또는
+npm run init
 ```
 
 이 스크립트는 `data/*.sample.csv` 파일을 `data/*.csv`로 복사합니다.
@@ -85,32 +95,38 @@ npm run lint
 | `user1`  | `password` | 일반 사용자 | 대시보드 앱 접근 가능 |
 | `demo`   | `password` | 일반 사용자 | 데모 계정             |
 
-## 📂 데이터 파일 구조
+## 📂 데이터 저장소
 
-### CSV 파일 위치
+도메인별로 세 가지 저장소가 있습니다 (자세한 내용은 [아키텍처 문서](architecture.md) 의 "데이터 관리" 섹션 참고).
 
-```
+### 1) CSV (`data/*.csv`)
+
+대부분의 도메인 — 사용자, 앱, 설정, 여행 준비, 오늘할일, 칭찬뱃지, 푸시 구독, 활동 로그 등.
+
+```text
 data/
-├── users.csv              # 사용자 데이터 (실제)
-├── users.sample.csv       # 사용자 샘플 (Git 포함)
-├── apps.csv               # 앱 설정 (실제)
-├── apps.sample.csv        # 앱 설정 샘플 (Git 포함)
-├── travel-items.csv       # 여행 아이템 (실제)
-├── travel-items.sample.csv
-├── travel-types.csv       # 여행 유형 (실제)
-├── travel-types.sample.csv
-├── bags.csv               # 가방 정보 (실제)
-├── bags.sample.csv
-├── trip-lists.csv         # 여행 목록 (실제)
-├── trip-lists.sample.csv
-├── trip-items.csv         # 여행 아이템 (실제)
-└── trip-items.sample.csv
+├── users.csv / users.sample.csv
+├── apps.csv / apps.sample.csv
+├── user-app-settings.csv / user-app-settings.sample.csv
+├── daily-tasks.csv / daily-tasks.sample.csv
+├── daily-task-logs.csv, daily-stats.csv
+├── travel-types.csv, travel-items.csv, bags.csv, trip-lists.csv, trip-items.csv
+├── praise-badges.csv, praise-mappings.csv, praise-history.csv,
+│   praise-redemptions.csv, praise-reward-items.csv
+├── subscriptions.csv (웹 푸시 디바이스 구독)
+└── activity-logs.csv
 ```
 
-### CSV 파일 관리
+- **`*.csv`**: 실제 운영 데이터 (`.gitignore` 에 포함되어 Git에서 제외)
+- **`*.sample.csv`**: 초기 데이터 템플릿 (Git 포함). `*.csv` 가 없으면 자동 복사.
 
-- **`*.csv`**: 실제 운영 데이터 (`.gitignore`에 포함되어 Git에서 제외)
-- **`*.sample.csv`**: 초기 데이터 템플릿 (Git에 포함)
+### 2) SQLite (`data/cafe.db`)
+
+카페 게시판(posts·comments) 한정. `src/lib/db.ts` import 시 자동 초기화.
+
+### 3) Google Sheets (성장기록)
+
+자녀의 키·몸무게 측정 데이터. CSV 미러 없이 Sheets가 SoT. `.env.local` 의 `GOOGLE_SHEETS_ID` / `GOOGLE_SERVICE_ACCOUNT_KEY` 가 비어 있으면 페이지 진입 시 안내 메시지가 표시됩니다.
 
 첫 실행 시 `*.csv` 파일이 없으면 자동으로 `*.sample.csv`에서 복사됩니다.
 
@@ -132,7 +148,7 @@ Turbopack을 사용하므로 파일 변경 시 즉시 반영됩니다.
 
 ```bash
 rm data/*.csv
-bash scripts/init-dev.sh
+bash scripts/init.sh
 ```
 
 또는 서버 재시작 시 자동으로 샘플 데이터에서 복사됩니다.
@@ -171,5 +187,5 @@ npm install
 ```bash
 # 데이터 파일 초기화
 rm data/*.csv
-bash scripts/init-dev.sh
+bash scripts/init.sh
 ```

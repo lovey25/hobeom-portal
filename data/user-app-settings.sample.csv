@@ -19,3 +19,5 @@ id,user_id,app_id,is_visible,custom_order,category
 18,2,8,false,4,dashboard
 19,2,9,true,5,dashboard
 20,2,10,true,6,dashboard
+21,1,19,true,9,dashboard
+22,2,19,false,9,dashboard

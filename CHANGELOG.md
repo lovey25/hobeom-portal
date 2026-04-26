@@ -5,6 +5,36 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
+## [1.1.0] - 2026-04-26
+
+### Added — 성장 기록 관리 (Google Sheets 연동)
+
+- **새 대시보드 앱**: `/dashboard/growth-records`
+  - 자녀 한 명의 키·몸무게 측정 기록 관리
+  - recharts 기반 듀얼 Y축 성장 그래프
+  - 한국 표준 성장도표 백분위(3% / 50% / 97%) 영역 오버레이
+  - 측정 기록 추가·수정·삭제 모달
+  - 최근 기록 테이블 (기본 접힘, 클릭 시 펼침)
+  - "AI 자문받기"·"설정" 버튼은 자리만 두고 비활성
+
+- **새 데이터 레이어**: Google Sheets (3번째 SoT)
+  - `src/lib/sheets/client.ts`: Service Account 인증
+  - `src/lib/sheets/growthAdapter.ts`: 동적 헤더 매핑(한국어 컬럼명 대응)
+  - `src/lib/sheets/percentile-data.ts`: 백분위 정적 JSON
+  - 기존 CSV·SQLite 레이어와 분리해 도메인 별도 운영
+
+- **신규 의존성**: `googleapis`, `recharts`
+- **신규 환경변수**: `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY`
+- **앱 등록**: `apps.csv` id=19 (`category=dashboard`), `user-app-settings.sample.csv` 에 admin·user1 시드 추가
+- **타입 추가**: `ChildProfile`, `GrowthRecord`
+- **API**: `GET/POST /api/growth-records`, `PUT/DELETE /api/growth-records/[rowIndex]`, `GET /api/growth-records/profile`
+
+### Changed — 디자인·문서 정합성
+
+- 성장기록 헤더·차트·토글 색상을 디자인 시스템 stat 카드 톤(blue-50/red-50 베이스, primary blue-600/red-600)에 맞춰 통일
+- 차트 축·legend·tooltip 텍스트 색을 명시(gray-700/gray-900)해 가독성 개선
+- 문서 전반 현행화: 데이터 레이어가 2개 → 3개로 변경된 점을 README, CLAUDE.md, architecture.md, getting-started.md, environment-setup.md, deployment.md 에 반영
+
 ## [0.4.0] - 2025-10-17
 
 ### Changed - 대규모 리팩토링

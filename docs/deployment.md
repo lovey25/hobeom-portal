@@ -253,12 +253,23 @@ netlify deploy --prod
 JWT_SECRET=your-very-secure-secret-key-at-least-32-characters
 NODE_ENV=production
 
-# 데이터베이스 (DB 사용 시)
+# 웹 푸시 (사용 시)
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@example.com
+
+# 성장기록 — Google Sheets 연동 (사용 시)
+GOOGLE_SHEETS_ID=your-spreadsheet-id
+GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+
+# 데이터베이스 (CSV 대신 외부 DB 사용 시)
 DATABASE_URL=postgresql://user:password@host:port/database
 
 # 선택
 NEXT_PUBLIC_API_URL=https://your-domain.com/api
 ```
+
+⚠️ `GOOGLE_SERVICE_ACCOUNT_KEY` 는 매우 민감한 비밀이므로 PM2 ecosystem 파일이 아니라 호스트의 시크릿 매니저(또는 `.env.production` 의 별도 보호)로 관리하세요.
 
 ### CORS 설정
 
